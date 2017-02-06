@@ -1,5 +1,5 @@
 language: d
-sudo: false
+sudo: required
 
 apt_packages:
   - cmake
@@ -9,7 +9,7 @@ install:
   - cd nanomsg
   - cmake -DNN_STATIC_LIB=on .
   - make -j`nproc`
-  - export LD_LIBRARY_PATH=$PWD
+  - sudo cp libnanomsg.a /usr/local/bin
   - cd -
 
 matrix:
