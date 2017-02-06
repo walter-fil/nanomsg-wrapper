@@ -9,7 +9,7 @@ install:
   - cd nanomsg
   - cmake -DNN_STATIC_LIB=on .
   - make -j`nproc`
-  - sudo cp libnanomsg.a /usr/local/bin
+  - sudo cp libnanomsg.a /usr/local/lib
   - cd -
 
 matrix:
