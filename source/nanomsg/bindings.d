@@ -273,6 +273,7 @@ enum NN
     IPV4ONLY =14,
     SOCKET_NAME=15,
     RCVMAXSIZE=16,
+    TTL=17,
 }
 enum NN_LINGER = NN.LINGER;
 enum NN_SNDBUF = NN.SNDBUF;
@@ -290,6 +291,7 @@ enum NN_PROTOCOL = NN.PROTOCOL;
 enum NN_IPV4ONLY = NN.IPV4ONLY;
 enum NN_SOCKET_NAME = NN.SOCKET_NAME;
 enum NN_RCVMAXSIZE = NN.RCVMAXSIZE;
+enum NN_TTL = NN.TTL;
 
 /*  Send/recv options.                                                        */
 enum NN_DONTWAIT =1;

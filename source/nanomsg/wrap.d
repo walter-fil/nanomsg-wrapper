@@ -1,236 +1,225 @@
+/**
+ This module implements a D convenience API for nanomsg
+ */
+
 module nanomsg.wrap;
 
-import nanomsg.bindings;
+public import nanomsg.bindings;
+public import std.typecons: Yes, No;
 
-
-enum NanoSocketOptions
-{
-    linger = NN.LINGER,
-    sendBuffer = NN.SNDBUF,
-    receiveBuffer = NN.RCVBUF,
-    sendTimeOut = NN.SNDTIMEO,
-    receiveTimeOut = NN.RCVTIMEO,
-    reconnectInterval = NN.RECONNECT_IVL,
-    reconnectIntervalMax = NN.RECONNECT_IVL_MAX,
-    sendPriority = NN.SNDPRIO,
-    receivePriority = NN.RCVPRIO,
-    receiveFD = NN.RCVFD,
-    domain = NN.DOMAIN,
-    protocol = NN.PROTOCOL,
-    ip4Only = NN.IPV4ONLY,
-    socketName = NN.SOCKET_NAME,
-    receiveMaxSize = NN.RCVMAXSIZE,
+enum NanoProtocol {
+    request,
+    response,
+    subscribe,
+    publish,
+    pull,
+    push,
+    pair,
+    surveyor,
+    respondent,
+    bus,
 }
 
-struct NanoMessage
-{
-    // default constructor no longer allowed
-    // so this() must always be called with specific
-    // arguments.  defaults used to be:
-    // param1=AF_SP, param2=NN_REP
-    // probably better this way anyway
+enum NanoOption {
+    lingerMs, /// How long to try and send pending messages after nn_close. -1 means infinite
+    sendBufferSize, // Size of the send buffer in bytes
+    receiveBufferSize, // Size of the receive buffer in bytes
+    receiveMaxSize, /// Maximum message size that can be received, in bytes
+    sendTimeoutMs, /// How long in milliseconds it takes for send to timeout
+    receiveTimeoutMs, /// How long in milliseconds it takes for receive to timeout
+    reconnectIntervalMs, /// How long to wait to re-establish connection
+    reconnectIntervalMax, /// Maximum reconnect interval
+    sendPriority, /// Outbound priority for endpoints added to socket
+    receivePriority, /// Inbout priority for endpoints added to socket
+    ipv4Only, /// Self-explanatory
+    socketName, /// Socket name for error reporting and statistics
+    timeToLive, /// Number of hops before message is dropped
+    subscribeTopic, /// Subscription topic
+    tcpNoDelay, /// Disables Nagle's algorithm
+    surveyorDeadlineMs, /// How long to wait for responses in milliseconds
+}
 
-    char *url;
-    int sock=-1;
-    char* buf = null;
-    bool isShutDown=true;
-    int eid=-1;
+struct NanoSocket {
+
+    import std.traits: isArray;
+    import std.typecons: Flag;
+
 
     @disable this(this);
 
-    this(int domain, int protocol)
-    {
-        import std.exception: enforce;
-        import std.conv: to;
+    enum INVALID_FD = -1;
 
-        this.sock = nn_socket(domain, protocol);
-        enforce(this.sock >= 0,"cannot create nanomsg socket for modes "~ to!string(domain) ~ " "~ to!string(protocol)~"\n"~errorMessage()~"\n");
-        this.isShutDown = false;
-    }
+    this(NanoProtocol protocol, int domain = AF_SP) {
 
-    ~this()
-    {
-        if(sock>-1)
-            nn_close(sock);
-        sock=-1;
-        eid=-1;
-    }
-}
-
-string errorMessage()
-{
-    import std.string: fromStringz;
-    return nn_strerror(nn_errno()).fromStringz.idup;
-}
-
-auto surl(ref NanoMessage nano)
-{
-    import std.string: fromStringz;
-    return nano.url.fromStringz;
-}
-
-auto ref bind(ref NanoMessage nano, string surl)
-{
-    nano.open(surl,true);
-    return nano;
-}
-auto ref connect(ref NanoMessage nano, string surl)
-{
-    nano.open(surl,false);
-    return nano;
-}
-
-auto ref open(ref NanoMessage nano,string surl, bool bind=true)
-{
-    import std.exception: enforce;
-    import std.string: toStringz;
-
-    enforce(nano.sock>=0,"cannot create nanomsg socket for " ~ surl ~ ": " ~ errorMessage());
-    if (bind)
-        nano.eid = nn_bind(nano.sock,toStringz(surl));
-    else
-        nano.eid = nn_connect(nano.sock,toStringz(surl));
-    enforce(nano.eid >= 0,"nanomsg did not " ~ (bind?"bind":"connect")~" to new socket for "~surl~": "~errorMessage());
-    return nano;
-}
-
-ubyte[] receive(ref NanoMessage nano, int flags, bool pubsub=false)
-{
-    import std.conv: to;
-
-    ubyte[] recvbytes;
-    nano.buf=null;
-    //consider returning as sized array without copy
-    auto numbytes = nn_recv(nano.sock,&nano.buf,NN_MSG,flags);
-    scope(exit)
-    {
-        if(nano.buf !is null)
-            nn_freemsg(nano.buf);
-        nano.buf=null;
-    }
-    if (numbytes >= 0)
-    {
-        recvbytes.length=numbytes+1;
-        foreach(i;0..numbytes)
-        {
-            recvbytes[i]=nano.buf[i];
+        int protocolToInt(NanoProtocol protocol) {
+            final switch(protocol) with(NanoProtocol) {
+                case request:
+                    return NN_REQ;
+                case response:
+                    return NN_REP;
+                case publish:
+                    return NN_PUB;
+                case subscribe:
+                    return NN_SUB;
+                case pull:
+                    return NN_PULL;
+                case push:
+                    return NN_PUSH;
+                case pair:
+                    return NN_PAIR;
+                case surveyor:
+                    return NN_SURVEYOR;
+                case respondent:
+                    return NN_RESPONDENT;
+                case bus:
+                    return NN_BUS;
+            }
         }
-        return recvbytes;
+
+        _nanoSock = nn_socket(domain, protocolToInt(protocol));
+        enforceNanoMsgRet(_nanoSock);
     }
-    else
-    {
-        if(pubsub)
-            return [];  // TO DO FIX ME - distinguish between error and no message for me
-        else
-            throw new Exception("nanomsg encountered an error whilst trying to receive a message for "~to!string(nano.url) ~ " error:"~ errorMessage());
+
+    ~this() {
+        if(_nanoSock != INVALID_FD) {
+            _nanoSock.nn_close;
+        }
     }
-    assert(0);
-}
 
-string receiveAsString(ref NanoMessage nano, int flags=0, bool pubSub=false)
-{
-    import std.conv: to;
-    return to!string(cast(char[])nano.receive(flags,pubSub));
-}
+    static NanoSocket createBound(in NanoProtocol protocol, in string uri) {
+        import std.string: replace;
 
-int send(ref NanoMessage nano, char* mybuf, size_t numbytes, bool nonBlocking=false)
-{
-    return nn_send(nano.sock,mybuf,numbytes,nonBlocking?NN_DONTWAIT:0).errcheck("send(char*)");
-}
-
-int send(ref NanoMessage nano, ubyte[] mybuf, bool nonBlocking=false)
-{
-    return nn_send(nano.sock,cast(char*)mybuf.ptr,cast(int)(mybuf.length),nonBlocking?NN_DONTWAIT:0).errcheck("send(ubyte[])");
-}
-
-int send(ref NanoMessage nano, string mybuf, bool nonBlocking=false)
-{
-    return nn_send(nano.sock,mybuf.ptr,mybuf.length+1,nonBlocking?NN_DONTWAIT:0).errcheck("send(string mybuf)");
-}
-
-auto ref setOpt(ref NanoMessage nano,int level, int option, string stringVal)
-{
-    import std.string: toStringz;
-
-    nn_setsockopt(nano.sock,level,option,stringVal.toStringz,stringVal.length);
-    return nano;
-}
-
-auto ref setOpt(T)(ref NanoMessage nano, int level, int option, T* optval)
-{
-    nn_setsockopt(nano.sock,level,option,optval,(optval).size);
-    return nano;
-}
-
-auto ref getOpt(ref NanoMessage nano, int level, int option, void* optval, size_t *optvallen)
-{
-    nn_getsockopt(nano.sock,level,option,optval,optvallen);
-    return nano;
-}
-auto ref close(ref NanoMessage nano)
-{
-    if(nano.sock!=-1)
-        errcheck(nn_close(nano.sock),"close()");
-    nano.sock=-1;
-    nano.eid=-1;
-    return nano;
-}
-
-int sendMessage(ref NanoMessage nano,const nn_msghdr* msghdr, int flags)
-{
-    return nn_sendmsg(nano.sock,msghdr,flags);
-}
-
-int receiveMessage(ref NanoMessage nano, nn_msghdr* msghdr, int flags)
-{
-    return nn_recvmsg(nano.sock,msghdr,flags).errcheck("receiveMessage");
-}
-
-bool canReceive(ref NanoMessage nano)
-{
-    nn_pollfd  pfd;
-    pfd.fd = nano.sock;
-    pfd.events = NN_POLLIN | NN_POLLOUT;
-    auto rc = nn_poll(&pfd, 1, 100);
-    return false;
-}
-
-bool canSend(ref NanoMessage nano)
-{
-    import std.exception:enforce;
-    nn_pollfd pfd;
-    pfd.fd=nano.sock;
-    pfd.events=NN_POLLOUT;
-    auto res=nn_poll(&pfd,1,2000);
-    enforce(res!=-1,"nanomsg: unable to check socket readiness status- "~errorMessage());
-    return(pfd.revents&& NN_POLLOUT)!=0;
-}
-
-void freeMessage(ref NanoMessage nano)
-{
-    if (nano.buf)
-        nn_freemsg(nano.buf);
-    nano.buf=null;
-}
-
-auto ref shutdown(ref NanoMessage nano)
-{
-    if (nano.buf)
-        nn_freemsg(nano.buf);
-
-    if(nano.eid>-1)
-    {
-        auto ret=nn_shutdown(nano.sock,nano.eid); // we should check this value and throw exception if need be
+        auto sock = NanoSocket(protocol);
+        // this is so it's easy to specify the same string
+        // for both ends of the socket
+        sock.bind(uri.replace("localhost", "*"));
+        return sock;
     }
-    nano.eid=-1;
-    nano.sock=-1;
-    nano.isShutDown=true;
-    return nano;
-}
 
-private int errcheck(int retval, string caller="")
-{
-    import std.exception:enforce;
-    enforce(retval!=-1,"nanomsg error"~caller~": " ~ errorMessage());
-    return retval;
+    static NanoSocket createConnected(in NanoProtocol protocol, in string uri) {
+        import core.thread;
+
+        auto sock = NanoSocket(protocol);
+        sock.connect(uri);
+
+        // on Windows sometimes the socket tries to send before the TCP handshake
+        Thread.sleep(100.msecs);
+
+        return sock;
+    }
+
+    void setOption(T)(NanoOption option, T val) {
+        auto optionC = toNanoOptionC(option);
+        setOption(optionC.level, optionC.option, val);
+    }
+
+    ubyte[] receive(int BUF_SIZE = 1024)(Flag!"blocking" blocking = Yes.blocking) {
+        // kaleidic.nanomsg.wrap.receive made the tests fail
+        import core.stdc.errno;
+        ubyte[BUF_SIZE] buf;
+        const flags = blocking ? 0 : NN_DONTWAIT;
+        auto numBytes = nn_recv(_nanoSock, buf.ptr, buf.length, flags);
+        if(blocking) enforceNanoMsgRet(numBytes);
+
+        if(numBytes < 0) numBytes = 0;
+        return buf[0 .. numBytes].dup;
+    }
+
+    int send(T)(T[] data, Flag!"blocking" blocking = Yes.blocking) {
+        int flags = blocking ? 0 : NN_DONTWAIT;
+        return nn_send(_nanoSock, data.ptr, data.length, flags);
+    }
+
+    void connect(in string uri) {
+        import std.string: toStringz;
+        enforceNanoMsgRet(nn_connect(_nanoSock, uri.toStringz));
+    }
+
+    void bind(in string uri) {
+        import std.string: toStringz;
+        enforceNanoMsgRet(nn_bind(_nanoSock, uri.toStringz));
+    }
+
+private:
+
+    int _nanoSock = INVALID_FD;
+
+    void enforceNanoMsgRet(E)(lazy E expr, string file = __FILE__, size_t line = __LINE__) {
+        import core.stdc.errno;
+        import core.stdc.string;
+        import std.exception: enforce;
+        import std.conv: text;
+        const value = expr();
+        if(value < 0)
+            throw new Exception(text("nanomsg expression failed with value ", value,
+                                     " errno ", errno, ", error: ", strerror(errno)),
+                                file,
+                                line);
+    }
+
+    // the int level and option values needed by the nanomsg C API
+    static struct NanoOptionC {
+        int level;
+        int option;
+    }
+
+    NanoOptionC toNanoOptionC(NanoOption option) {
+        final switch(option) with(NanoOption) {
+            case lingerMs:
+                return NanoOptionC(NN_SOL_SOCKET, NN_LINGER);
+
+            case sendBufferSize:
+                return NanoOptionC(NN_SOL_SOCKET, NN_SNDBUF);
+
+            case receiveBufferSize:
+                return NanoOptionC(NN_SOL_SOCKET, NN_RCVBUF);
+
+            case receiveMaxSize:
+                return NanoOptionC(NN_SOL_SOCKET, NN_RCVMAXSIZE);
+
+            case sendTimeoutMs:
+                return NanoOptionC(NN_SOL_SOCKET, NN_SNDTIMEO);
+
+            case receiveTimeoutMs:
+                return NanoOptionC(NN_SOL_SOCKET, NN_RCVTIMEO);
+
+            case reconnectIntervalMs:
+                return NanoOptionC(NN_SOL_SOCKET, NN_RECONNECT_IVL);
+
+            case reconnectIntervalMax:
+                return NanoOptionC(NN_SOL_SOCKET, NN_RECONNECT_IVL_MAX);
+
+            case sendPriority:
+                return NanoOptionC(NN_SOL_SOCKET, NN_SNDPRIO);
+
+            case receivePriority:
+                return NanoOptionC(NN_SOL_SOCKET, NN_RCVPRIO);
+
+            case ipv4Only:
+                return NanoOptionC(NN_SOL_SOCKET, NN_IPV4ONLY);
+
+            case socketName:
+                return NanoOptionC(NN_SOL_SOCKET, NN_SOCKET_NAME);
+
+            case timeToLive:
+                return NanoOptionC(NN_SOL_SOCKET, NN_TTL);
+
+            case subscribeTopic:
+                return NanoOptionC(NN_SUB, NN_SUB_SUBSCRIBE);
+
+            case tcpNoDelay:
+                return NanoOptionC(NN_TCP, NN_TCP_NODELAY);
+
+            case surveyorDeadlineMs:
+                return NanoOptionC(NN_SURVEYOR, NN_SURVEYOR_DEADLINE);
+        }
+    }
+
+    void setOption(T)(int level, int option, ref T val) if(isArray!T) {
+        enforceNanoMsgRet(nn_setsockopt(_nanoSock, level, option, val.ptr, val.length));
+    }
+
+    void setOption(T)(int level, int option, T val) if(!isArray!T) {
+        enforceNanoMsgRet(nn_setsockopt(_nanoSock, level, option, &val, val.sizeof));
+    }
 }
