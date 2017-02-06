@@ -121,6 +121,13 @@ struct NanoSocket {
         setOption(optionC.level, optionC.option, val);
     }
 
+    T getOption(T)(NanoOption option) {
+        const optionC = toNanoOptionC(option);
+        T val;
+        enforceNanoMsgRet(nn_getsockopt(_nanoSock, optionC.level, optionC.option, &val, val.sizeof));
+        return val;
+    }
+
     ubyte[] receive(int BUF_SIZE = 1024)(Flag!"blocking" blocking = Yes.blocking) {
         // kaleidic.nanomsg.wrap.receive made the tests fail
         import core.stdc.errno;
