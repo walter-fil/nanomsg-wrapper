@@ -39,6 +39,14 @@ enum NanoOption {
     surveyorDeadlineMs, /// How long to wait for responses in milliseconds
 }
 
+struct ConnectTo {
+    string uri;
+}
+
+struct BindTo {
+    string uri;
+}
+
 struct NanoSocket {
 
     import std.traits: isArray;
@@ -80,36 +88,36 @@ struct NanoSocket {
         enforceNanoMsgRet(_nanoSock);
     }
 
+    this(in NanoProtocol protocol, in BindTo bindTo, int domain = AF_SP) {
+        import std.string: replace;
+
+        this(protocol, domain);
+
+        // this is so it's easy to specify the same string
+        // for both ends of the socket
+        bind(bindTo.uri.replace("localhost", "*"));
+    }
+
+    this(in NanoProtocol protocol, in ConnectTo connectTo, int domain = AF_SP) {
+
+        this(protocol, domain);
+        connect(connectTo.uri);
+
+        version(Windows) {
+            // on Windows sometimes the socket tries to send before the TCP handshake
+            import core.thread;
+            Thread.sleep(100.msecs);
+        }
+    }
+
     ~this() {
         if(_nanoSock != INVALID_FD) {
             _nanoSock.nn_close;
         }
     }
 
-    static NanoSocket createBound(in NanoProtocol protocol, in string uri) {
-        import std.string: replace;
-
-        auto sock = NanoSocket(protocol);
-        // this is so it's easy to specify the same string
-        // for both ends of the socket
-        sock.bind(uri.replace("localhost", "*"));
-        return sock;
-    }
-
-    static NanoSocket createConnected(in NanoProtocol protocol, in string uri) {
-        import core.thread;
-
-        auto sock = NanoSocket(protocol);
-        sock.connect(uri);
-
-        // on Windows sometimes the socket tries to send before the TCP handshake
-        Thread.sleep(100.msecs);
-
-        return sock;
-    }
-
     void setOption(T)(NanoOption option, T val) {
-        auto optionC = toNanoOptionC(option);
+        const optionC = toNanoOptionC(option);
         setOption(optionC.level, optionC.option, val);
     }
 
