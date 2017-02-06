@@ -1,5 +1,4 @@
 name "nanomsg-wrapper"
-version "0.0.1"
 description "Nanomsg wrappers for the D Programming Language."
 homepage "https://github.com/atilaneves/d-nanomsg"
 authors "Laeeth Isharc" "Atila Neves"
