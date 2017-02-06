@@ -30,10 +30,7 @@
 3)  BINDINGS THEMSELVES
     Not an original work since it is the hacked-up set of headers from nanomsg.  But to the
     extent it is an original work then I release these changes under the same license as applies
-    to the nanomsg main project.  I would be grateful though if you would let me know if you use this
-    work in the financial area (just to satisfy my curiosity).
+    to the nanomsg main project.
 
-    Please email me laeeth-nospam@nospam-laeeth.com if any questions (but understand that
-    on occasion it may be a few weeks before I am able to respond).
-    
-
+4)  WRAPPER CODE
+    Boost license.
