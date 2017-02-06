@@ -274,3 +274,24 @@ unittest {
     sock.setOption(NanoOption.sendTimeoutMs, 42);
     sock.getOption!int(NanoOption.sendTimeoutMs).shouldEqual(42);
 }
+
+@("pub/sub")
+unittest {
+    const uri = "inproc://test";
+    auto pub = NanoSocket(NanoProtocol.publish, BindTo(uri));
+    auto sub = NanoSocket(NanoProtocol.subscribe, ConnectTo(uri));
+    sub.setOption(NanoOption.subscribeTopic, "foo");
+
+    // messages that start with the subscription topic should be received
+    pub.send("foo/hello");
+    sub.receive(No.blocking).shouldEqual("foo/hello");
+
+    // but not messages that don't
+    pub.send("bar/oops");
+    sub.receive(No.blocking).shouldBeEmpty;
+
+    // after unsubscribing, messages are no longer received
+    sub.setOption(NanoOption.unsubscribeTopic, "foo");
+    pub.send("foo/hello");
+    sub.receive(No.blocking).shouldBeEmpty;
+}
