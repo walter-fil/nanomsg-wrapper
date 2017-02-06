@@ -4,7 +4,7 @@
 
 module nanomsg.wrap;
 
-public import nanomsg.bindings;
+import nanomsg.bindings;
 public import std.typecons: Yes, No;
 
 version(unittest) import unit_threaded;
