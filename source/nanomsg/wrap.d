@@ -1,9 +1,7 @@
-module kaleidic.nanomsg.wrap;
-import kaleidic.nanomsg.bindings;
+module nanomsg.wrap;
 
-import std.stdio;
-import std.conv;
-import std.string;
+import nanomsg.bindings;
+
 
 enum NanoSocketOptions
 {
@@ -42,7 +40,9 @@ struct NanoMessage
 
     this(int domain, int protocol)
     {
-        import std.exception:enforce;
+        import std.exception: enforce;
+        import std.conv: to;
+
         this.sock = nn_socket(domain, protocol);
         enforce(this.sock >= 0,"cannot create nanomsg socket for modes "~ to!string(domain) ~ " "~ to!string(protocol)~"\n"~errorMessage()~"\n");
         this.isShutDown = false;
@@ -50,12 +50,6 @@ struct NanoMessage
 
     ~this()
     {
-        import std.stdio;
-
-        writefln("nanomsg destructor running!!!");
-        /*
-        if (!isShutDown)
-            this.shutdown(); */
         if(sock>-1)
             nn_close(sock);
         sock=-1;
@@ -65,17 +59,18 @@ struct NanoMessage
 
 string errorMessage()
 {
+    import std.string: fromStringz;
     return nn_strerror(nn_errno()).fromStringz.idup;
 }
 
 auto surl(ref NanoMessage nano)
 {
+    import std.string: fromStringz;
     return nano.url.fromStringz;
 }
 
 auto ref bind(ref NanoMessage nano, string surl)
 {
-    writefln("* binding to: %s",surl);
     nano.open(surl,true);
     return nano;
 }
@@ -87,18 +82,22 @@ auto ref connect(ref NanoMessage nano, string surl)
 
 auto ref open(ref NanoMessage nano,string surl, bool bind=true)
 {
-    import std.exception:enforce;
-    enforce(nano.sock>=0,"cannot create nanomsg socket for "~surl~": "~errorMessage());
+    import std.exception: enforce;
+    import std.string: toStringz;
+
+    enforce(nano.sock>=0,"cannot create nanomsg socket for " ~ surl ~ ": " ~ errorMessage());
     if (bind)
         nano.eid = nn_bind(nano.sock,toStringz(surl));
     else
         nano.eid = nn_connect(nano.sock,toStringz(surl));
-    writefln("* eid = %s for %s to: %s",nano.eid,bind?"bind":"connect",surl);
     enforce(nano.eid >= 0,"nanomsg did not " ~ (bind?"bind":"connect")~" to new socket for "~surl~": "~errorMessage());
     return nano;
 }
+
 ubyte[] receive(ref NanoMessage nano, int flags, bool pubsub=false)
 {
+    import std.conv: to;
+
     ubyte[] recvbytes;
     nano.buf=null;
     //consider returning as sized array without copy
@@ -130,6 +129,7 @@ ubyte[] receive(ref NanoMessage nano, int flags, bool pubsub=false)
 
 string receiveAsString(ref NanoMessage nano, int flags=0, bool pubSub=false)
 {
+    import std.conv: to;
     return to!string(cast(char[])nano.receive(flags,pubSub));
 }
 
@@ -150,6 +150,8 @@ int send(ref NanoMessage nano, string mybuf, bool nonBlocking=false)
 
 auto ref setOpt(ref NanoMessage nano,int level, int option, string stringVal)
 {
+    import std.string: toStringz;
+
     nn_setsockopt(nano.sock,level,option,stringVal.toStringz,stringVal.length);
     return nano;
 }
@@ -191,10 +193,6 @@ bool canReceive(ref NanoMessage nano)
     pfd.events = NN_POLLIN | NN_POLLOUT;
     auto rc = nn_poll(&pfd, 1, 100);
     return false;
-//      if (res==-1)
-   //     throw new Exception("unable to check socket readiness status - res=" ~ to!string(res) ~ "errno=" ~ to!string(nn_errno()));
-//    writefln("* returning can rx: %s", pfd.revents);
-//    return (pfd.revents & NN_POLLIN)!=0;
 }
 
 bool canSend(ref NanoMessage nano)
