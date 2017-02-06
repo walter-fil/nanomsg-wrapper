@@ -1,8 +1,7 @@
 language: d
-sudo: false
 
 install:
-  - apt-get install libnanomsg-dev
+  - sudo apt-get install libnanomsg-dev
 
 matrix:
     include:
