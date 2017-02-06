@@ -1,5 +1,16 @@
 language: d
-sudo: false
+sudo: required
+
+apt_packages:
+  - cmake
+
+install:
+  - git clone https://github.com/nanomsg/nanomsg.git
+  - cd nanomsg
+  - cmake -DNN_STATIC_LIB=on .
+  - make -j`nproc`
+  - sudo cp libnanomsg.a /usr/local/lib
+  - cd -
 
 matrix:
     include:
