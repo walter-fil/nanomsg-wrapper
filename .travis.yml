@@ -12,6 +12,9 @@ install:
   - cd nanomsg
   - cmake -DNN_STATIC_LIB=on .
   - make -j`nproc`
+  - echo "Currently in $PWD"
+  - cd -
+  - echo "Currently in $PWD"
 
 matrix:
     include:
