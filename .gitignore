@@ -5,4 +5,4 @@ libnanomsg*
 *.so
 *.o
 .dub
-__test*
+bin

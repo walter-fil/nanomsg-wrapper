@@ -1,20 +1,19 @@
-name "d-nanomsg"
-version "0.1.2"
-description "Nanomsg - ZeroMQ successor - bindings/wrappers for the D Programming Language."
-homepage "https://github.com/Laeeth/d-nanomsg"
-authors "Laeeth Isharc"
+name "nanomsg-wrapper"
+version "0.0.1"
+description "Nanomsg wrappers for the D Programming Language."
+homepage "https://github.com/atilaneves/d-nanomsg"
+authors "Laeeth Isharc" "Atila Neves"
 license "Boost-1.0"
 targetType "library"
 libs "nanomsg"
-sourcePaths "source/"
-importPaths "source/"
-configuration "sourceLibrary" {
-	targetType "sourceLibrary"
-}
+
 configuration "library" {
-	targetType "library"
 }
-configuration "dynamicLibrary" {
-	targetType "dynamicLibrary"
-	dflags "-fPIC" "-defaultlib=libphobos2.so"
+
+configuration "unittest" {
+    targetType "executable"
+    targetName "bin/ut"
+    dependency "unit-threaded" version="~>0.7.0"
+    preBuildCommands "dub run unit-threaded -c gen_ut_main -- -f bin/ut.d"
+    mainSourceFile "bin/ut.d"
 }

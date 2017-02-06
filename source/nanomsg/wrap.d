@@ -7,6 +7,8 @@ module nanomsg.wrap;
 public import nanomsg.bindings;
 public import std.typecons: Yes, No;
 
+version(unittest) import unit_threaded;
+
 enum NanoProtocol {
     request,
     response,
@@ -34,7 +36,8 @@ enum NanoOption {
     ipv4Only, /// Self-explanatory
     socketName, /// Socket name for error reporting and statistics
     timeToLive, /// Number of hops before message is dropped
-    subscribeTopic, /// Subscription topic
+    subscribeTopic, /// Subscribe to topic
+    unsubscribeTopic, /// Unsubscribe to topic
     tcpNoDelay, /// Disables Nagle's algorithm
     surveyorDeadlineMs, /// How long to wait for responses in milliseconds
 }
@@ -52,7 +55,7 @@ struct NanoSocket {
     import std.traits: isArray;
     import std.typecons: Flag;
 
-
+    // or else sockets would be destroyed
     @disable this(this);
 
     enum INVALID_FD = -1;
@@ -123,13 +126,10 @@ struct NanoSocket {
 
     T getOption(T)(NanoOption option) {
         const optionC = toNanoOptionC(option);
-        T val;
-        enforceNanoMsgRet(nn_getsockopt(_nanoSock, optionC.level, optionC.option, &val, val.sizeof));
-        return val;
+        return getOption!T(optionC.level, optionC.option);
     }
 
     ubyte[] receive(int BUF_SIZE = 1024)(Flag!"blocking" blocking = Yes.blocking) {
-        // kaleidic.nanomsg.wrap.receive made the tests fail
         import core.stdc.errno;
         ubyte[BUF_SIZE] buf;
         const flags = blocking ? 0 : NN_DONTWAIT;
@@ -162,7 +162,6 @@ private:
     void enforceNanoMsgRet(E)(lazy E expr, string file = __FILE__, size_t line = __LINE__) {
         import core.stdc.errno;
         import core.stdc.string;
-        import std.exception: enforce;
         import std.conv: text;
         const value = expr();
         if(value < 0)
@@ -222,6 +221,9 @@ private:
             case subscribeTopic:
                 return NanoOptionC(NN_SUB, NN_SUB_SUBSCRIBE);
 
+            case unsubscribeTopic:
+                return NanoOptionC(NN_SUB, NN_SUB_UNSUBSCRIBE);
+
             case tcpNoDelay:
                 return NanoOptionC(NN_TCP, NN_TCP_NODELAY);
 
@@ -237,4 +239,38 @@ private:
     void setOption(T)(int level, int option, T val) if(!isArray!T) {
         enforceNanoMsgRet(nn_setsockopt(_nanoSock, level, option, &val, val.sizeof));
     }
+
+    T getOption(T)(int level, int option) if(isArray!T) {
+        import std.traits: Unqual;
+        import std.conv: to;
+
+        // ElementType!string is dchar, and we don't want that,
+        // so instead we use this typeof
+        alias U = Unqual!(typeof(T.init[0]))[1000];
+        U val;
+        ulong length = val.length;
+        enforceNanoMsgRet(nn_getsockopt(_nanoSock, level, option, cast(void*)val.ptr, &length));
+        return val[0 .. length].to!T;
+    }
+
+    T getOption(T)(int level, int option) if(!isArray!T) {
+        import std.exception: enforce;
+        import std.conv: text;
+
+        T val;
+        ulong length = T.sizeof;
+        enforceNanoMsgRet(nn_getsockopt(_nanoSock, level, option, &val, &length));
+        enforce(length == T.sizeof,
+                text("getsockopt returned ", length, " but sizeof(", T.stringof, ") is ", T.sizeof));
+        return val;
+    }
+
+}
+
+@("set/get option")
+unittest {
+    auto sock = NanoSocket(NanoProtocol.subscribe);
+    sock.getOption!int(NanoOption.sendTimeoutMs).shouldEqual(-1);
+    sock.setOption(NanoOption.sendTimeoutMs, 42);
+    sock.getOption!int(NanoOption.sendTimeoutMs).shouldEqual(42);
 }
