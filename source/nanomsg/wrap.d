@@ -138,12 +138,7 @@ struct NanoSocket {
         const flags = blocking ? 0 : NN_DONTWAIT;
         const numBytes = nn_recv(_nanoSock, buf.ptr, buf.length, flags);
 
-        if(blocking)
-            enforceNanoMsgRet(numBytes);
-        else
-            enforce(nn_errno == EAGAIN || nn_errno == EINTR,
-                    text("Blocking received failed: ", nn_strerror(nn_errno)));
-
+        if(blocking) enforceNanoMsgRet(numBytes);
 
         return numBytes >= 0 ? buf[0 .. numBytes].dup : [];
     }
