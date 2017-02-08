@@ -60,7 +60,7 @@ struct NanoSocket {
 
     enum INVALID_FD = -1;
 
-    this(NanoProtocol protocol, int domain = AF_SP) {
+    this(NanoProtocol protocol, int domain = AF_SP) @trusted {
 
         int protocolToInt(NanoProtocol protocol) {
             final switch(protocol) with(NanoProtocol) {
@@ -91,7 +91,7 @@ struct NanoSocket {
         enforceNanoMsgRet(_nanoSock);
     }
 
-    this(in NanoProtocol protocol, in BindTo bindTo, int domain = AF_SP) {
+    this(in NanoProtocol protocol, in BindTo bindTo, int domain = AF_SP) @trusted {
         import std.string: replace;
 
         this(protocol, domain);
@@ -101,7 +101,7 @@ struct NanoSocket {
         bind(bindTo.uri.replace("localhost", "*"));
     }
 
-    this(in NanoProtocol protocol, in ConnectTo connectTo, int domain = AF_SP) {
+    this(in NanoProtocol protocol, in ConnectTo connectTo, int domain = AF_SP) @trusted {
 
         this(protocol, domain);
         connect(connectTo.uri);
@@ -113,44 +113,52 @@ struct NanoSocket {
         }
     }
 
-    ~this() {
+    ~this() @trusted {
         if(_nanoSock != INVALID_FD) {
             _nanoSock.nn_close;
         }
     }
 
-    void setOption(T)(NanoOption option, T val) {
+    void setOption(T)(NanoOption option, T val) const {
         const optionC = toNanoOptionC(option);
         setOption(optionC.level, optionC.option, val);
     }
 
-    T getOption(T)(NanoOption option) {
+    T getOption(T)(NanoOption option) const {
         const optionC = toNanoOptionC(option);
         return getOption!T(optionC.level, optionC.option);
     }
 
-    ubyte[] receive(int BUF_SIZE = 1024)(Flag!"blocking" blocking = Yes.blocking) {
-        import core.stdc.errno;
+    ubyte[] receive(int BUF_SIZE = 1024)(Flag!"blocking" blocking = Yes.blocking) const {
+        import std.exception: enforce;
+        import std.conv: text;
+        import core.stdc.errno: EAGAIN, EINTR;
+
         ubyte[BUF_SIZE] buf;
         const flags = blocking ? 0 : NN_DONTWAIT;
-        auto numBytes = nn_recv(_nanoSock, buf.ptr, buf.length, flags);
-        if(blocking) enforceNanoMsgRet(numBytes);
+        const numBytes = nn_recv(_nanoSock, buf.ptr, buf.length, flags);
 
-        if(numBytes < 0) numBytes = 0;
-        return buf[0 .. numBytes].dup;
+        if(blocking)
+            enforceNanoMsgRet(numBytes);
+        else
+            enforce(nn_errno == EAGAIN || nn_errno == EINTR,
+                    text("Blocking received failed: ", nn_strerror(nn_errno)));
+
+
+        return numBytes >= 0 ? buf[0 .. numBytes].dup : [];
     }
 
-    int send(T)(T[] data, Flag!"blocking" blocking = Yes.blocking) {
-        int flags = blocking ? 0 : NN_DONTWAIT;
+    int send(T)(T[] data, Flag!"blocking" blocking = Yes.blocking) const {
+        const int flags = blocking ? 0 : NN_DONTWAIT;
         return nn_send(_nanoSock, data.ptr, data.length, flags);
     }
 
-    void connect(in string uri) {
+    void connect(in string uri) @trusted const {
         import std.string: toStringz;
         enforceNanoMsgRet(nn_connect(_nanoSock, uri.toStringz));
     }
 
-    void bind(in string uri) {
+    void bind(in string uri) @trusted const {
         import std.string: toStringz;
         enforceNanoMsgRet(nn_bind(_nanoSock, uri.toStringz));
     }
@@ -159,14 +167,12 @@ private:
 
     int _nanoSock = INVALID_FD;
 
-    void enforceNanoMsgRet(E)(lazy E expr, string file = __FILE__, size_t line = __LINE__) {
-        import core.stdc.errno;
-        import core.stdc.string;
+    void enforceNanoMsgRet(E)(lazy E expr, string file = __FILE__, size_t line = __LINE__) const {
         import std.conv: text;
         const value = expr();
         if(value < 0)
             throw new Exception(text("nanomsg expression failed with value ", value,
-                                     " errno ", errno, ", error: ", strerror(errno)),
+                                     " errno ", nn_errno, ", error: ", nn_strerror(nn_errno)),
                                 file,
                                 line);
     }
@@ -177,7 +183,7 @@ private:
         int option;
     }
 
-    NanoOptionC toNanoOptionC(NanoOption option) {
+    static NanoOptionC toNanoOptionC(NanoOption option) @safe {
         final switch(option) with(NanoOption) {
             case lingerMs:
                 return NanoOptionC(NN_SOL_SOCKET, NN_LINGER);
@@ -232,15 +238,15 @@ private:
         }
     }
 
-    void setOption(T)(int level, int option, ref T val) if(isArray!T) {
+    void setOption(T)(int level, int option, ref T val) const if(isArray!T) {
         enforceNanoMsgRet(nn_setsockopt(_nanoSock, level, option, val.ptr, val.length));
     }
 
-    void setOption(T)(int level, int option, T val) if(!isArray!T) {
+    void setOption(T)(int level, int option, T val) const if(!isArray!T) {
         enforceNanoMsgRet(nn_setsockopt(_nanoSock, level, option, &val, val.sizeof));
     }
 
-    T getOption(T)(int level, int option) if(isArray!T) {
+    T getOption(T)(int level, int option) const if(isArray!T) {
         import std.traits: Unqual;
         import std.conv: to;
 
@@ -253,7 +259,7 @@ private:
         return val[0 .. length].to!T;
     }
 
-    T getOption(T)(int level, int option) if(!isArray!T) {
+    T getOption(T)(int level, int option) const if(!isArray!T) {
         import std.exception: enforce;
         import std.conv: text;
 
@@ -264,7 +270,6 @@ private:
                 text("getsockopt returned ", length, " but sizeof(", T.stringof, ") is ", T.sizeof));
         return val;
     }
-
 }
 
 @("set/get option")
@@ -277,7 +282,7 @@ unittest {
 
 @("pub/sub")
 unittest {
-    const uri = "inproc://test";
+    const uri = "inproc://test_pubsub";
     auto pub = NanoSocket(NanoProtocol.publish, BindTo(uri));
     auto sub = NanoSocket(NanoProtocol.subscribe, ConnectTo(uri));
     sub.setOption(NanoOption.subscribeTopic, "foo");
@@ -294,4 +299,21 @@ unittest {
     sub.setOption(NanoOption.unsubscribeTopic, "foo");
     pub.send("foo/hello");
     sub.receive(No.blocking).shouldBeEmpty;
+}
+
+
+@("req/rep")
+unittest {
+    const uri = "inproc://test_reqrep";
+    auto responder = NanoSocket(NanoProtocol.response, BindTo(uri));
+    auto requester = NanoSocket(NanoProtocol.request, ConnectTo(uri));
+
+    enum timeoutMs = 50;
+    responder.setOption(NanoOption.receiveTimeoutMs, timeoutMs);
+    requester.setOption(NanoOption.receiveTimeoutMs, timeoutMs);
+
+    requester.send("shake?");
+    responder.receive(Yes.blocking).shouldEqual("shake?");
+    responder.send("yep!");
+    requester.receive(Yes.blocking).shouldEqual("yep!");
 }
