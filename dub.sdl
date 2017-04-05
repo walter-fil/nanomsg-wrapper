@@ -4,6 +4,10 @@ homepage "https://github.com/atilaneves/d-nanomsg"
 authors "Laeeth Isharc" "Atila Neves"
 license "Boost-1.0"
 targetType "library"
+systemDependencies "nanomsg: if you have a static build of nanomsg installed, \
+    you may need to link to some other libraries such as libanl (part of \
+    glibc). You may be able to find what is necessary by running \
+    `pkg-config nanomsg --libs --static`"
 libs "nanomsg"
 
 configuration "library" {
