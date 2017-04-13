@@ -5,42 +5,13 @@
 module nanomsg.wrap;
 
 import nanomsg.bindings;
-public import std.typecons: Yes, No;
+public import std.typecons: Yes, No; // to facilitate using send, receive
 
-version(unittest) import unit_threaded;
+version(unittest)
+    import unit_threaded;
+else
+    enum HiddenTest;
 
-enum NanoProtocol {
-    request,
-    response,
-    subscribe,
-    publish,
-    pull,
-    push,
-    pair,
-    surveyor,
-    respondent,
-    bus,
-}
-
-enum NanoOption {
-    lingerMs, /// How long to try and send pending messages after nn_close. -1 means infinite
-    sendBufferSize, // Size of the send buffer in bytes
-    receiveBufferSize, // Size of the receive buffer in bytes
-    receiveMaxSize, /// Maximum message size that can be received, in bytes
-    sendTimeoutMs, /// How long in milliseconds it takes for send to timeout
-    receiveTimeoutMs, /// How long in milliseconds it takes for receive to timeout
-    reconnectIntervalMs, /// How long to wait to re-establish connection
-    reconnectIntervalMax, /// Maximum reconnect interval
-    sendPriority, /// Outbound priority for endpoints added to socket
-    receivePriority, /// Inbout priority for endpoints added to socket
-    ipv4Only, /// Self-explanatory
-    socketName, /// Socket name for error reporting and statistics
-    timeToLive, /// Number of hops before message is dropped
-    subscribeTopic, /// Subscribe to topic
-    unsubscribeTopic, /// Unsubscribe to topic
-    tcpNoDelay, /// Disables Nagle's algorithm
-    surveyorDeadlineMs, /// How long to wait for responses in milliseconds
-}
 
 struct ConnectTo {
     string uri;
@@ -55,15 +26,48 @@ struct NanoSocket {
     import std.traits: isArray;
     import std.typecons: Flag;
 
+    enum Protocol {
+        request,
+        response,
+        subscribe,
+        publish,
+        pull,
+        push,
+        pair,
+        surveyor,
+        respondent,
+        bus,
+    }
+
+    enum Option {
+        lingerMs, /// How long to try and send pending messages after nn_close. -1 means infinite
+        sendBufferSize, // Size of the send buffer in bytes
+        receiveBufferSize, // Size of the receive buffer in bytes
+        receiveMaxSize, /// Maximum message size that can be received, in bytes
+        sendTimeoutMs, /// How long in milliseconds it takes for send to timeout
+        receiveTimeoutMs, /// How long in milliseconds it takes for receive to timeout
+        reconnectIntervalMs, /// How long to wait to re-establish connection
+        reconnectIntervalMax, /// Maximum reconnect interval
+        sendPriority, /// Outbound priority for endpoints added to socket
+        receivePriority, /// Inbout priority for endpoints added to socket
+        ipv4Only, /// Self-explanatory
+        socketName, /// Socket name for error reporting and statistics
+        timeToLive, /// Number of hops before message is dropped
+        subscribeTopic, /// Subscribe to topic
+        unsubscribeTopic, /// Unsubscribe to topic
+        tcpNoDelay, /// Disables Nagle's algorithm
+        surveyorDeadlineMs, /// How long to wait for responses in milliseconds
+    }
+
     // or else sockets would be destroyed
     @disable this(this);
 
     enum INVALID_FD = -1;
 
-    this(NanoProtocol protocol, int domain = AF_SP) @trusted {
+    this(Protocol protocol, int domain = AF_SP) @trusted {
 
-        int protocolToInt(NanoProtocol protocol) {
-            final switch(protocol) with(NanoProtocol) {
+        int protocolToInt(Protocol protocol) {
+            final switch(protocol) with(Protocol) {
                 case request:
                     return NN_REQ;
                 case response:
@@ -91,7 +95,7 @@ struct NanoSocket {
         enforceNanoMsgRet(_nanoSock);
     }
 
-    this(in NanoProtocol protocol, in BindTo bindTo, int domain = AF_SP) @trusted {
+    this(in Protocol protocol, in BindTo bindTo, int domain = AF_SP) @trusted {
         import std.string: replace;
 
         this(protocol, domain);
@@ -101,7 +105,7 @@ struct NanoSocket {
         bind(bindTo.uri.replace("localhost", "*"));
     }
 
-    this(in NanoProtocol protocol, in ConnectTo connectTo, int domain = AF_SP) @trusted {
+    this(in Protocol protocol, in ConnectTo connectTo, int domain = AF_SP) @trusted {
 
         this(protocol, domain);
         connect(connectTo.uri);
@@ -119,13 +123,13 @@ struct NanoSocket {
         }
     }
 
-    void setOption(T)(NanoOption option, T val) const {
-        const optionC = toNanoOptionC(option);
+    void setOption(T)(Option option, T val) const {
+        const optionC = toOptionC(option);
         setOption(optionC.level, optionC.option, val);
     }
 
-    T getOption(T)(NanoOption option) const {
-        const optionC = toNanoOptionC(option);
+    T getOption(T)(Option option) const {
+        const optionC = toOptionC(option);
         return getOption!T(optionC.level, optionC.option);
     }
 
@@ -173,63 +177,63 @@ private:
     }
 
     // the int level and option values needed by the nanomsg C API
-    static struct NanoOptionC {
+    static struct OptionC {
         int level;
         int option;
     }
 
-    static NanoOptionC toNanoOptionC(NanoOption option) @safe {
-        final switch(option) with(NanoOption) {
+    static OptionC toOptionC(Option option) @safe {
+        final switch(option) with(Option) {
             case lingerMs:
-                return NanoOptionC(NN_SOL_SOCKET, NN_LINGER);
+                return OptionC(NN_SOL_SOCKET, NN_LINGER);
 
             case sendBufferSize:
-                return NanoOptionC(NN_SOL_SOCKET, NN_SNDBUF);
+                return OptionC(NN_SOL_SOCKET, NN_SNDBUF);
 
             case receiveBufferSize:
-                return NanoOptionC(NN_SOL_SOCKET, NN_RCVBUF);
+                return OptionC(NN_SOL_SOCKET, NN_RCVBUF);
 
             case receiveMaxSize:
-                return NanoOptionC(NN_SOL_SOCKET, NN_RCVMAXSIZE);
+                return OptionC(NN_SOL_SOCKET, NN_RCVMAXSIZE);
 
             case sendTimeoutMs:
-                return NanoOptionC(NN_SOL_SOCKET, NN_SNDTIMEO);
+                return OptionC(NN_SOL_SOCKET, NN_SNDTIMEO);
 
             case receiveTimeoutMs:
-                return NanoOptionC(NN_SOL_SOCKET, NN_RCVTIMEO);
+                return OptionC(NN_SOL_SOCKET, NN_RCVTIMEO);
 
             case reconnectIntervalMs:
-                return NanoOptionC(NN_SOL_SOCKET, NN_RECONNECT_IVL);
+                return OptionC(NN_SOL_SOCKET, NN_RECONNECT_IVL);
 
             case reconnectIntervalMax:
-                return NanoOptionC(NN_SOL_SOCKET, NN_RECONNECT_IVL_MAX);
+                return OptionC(NN_SOL_SOCKET, NN_RECONNECT_IVL_MAX);
 
             case sendPriority:
-                return NanoOptionC(NN_SOL_SOCKET, NN_SNDPRIO);
+                return OptionC(NN_SOL_SOCKET, NN_SNDPRIO);
 
             case receivePriority:
-                return NanoOptionC(NN_SOL_SOCKET, NN_RCVPRIO);
+                return OptionC(NN_SOL_SOCKET, NN_RCVPRIO);
 
             case ipv4Only:
-                return NanoOptionC(NN_SOL_SOCKET, NN_IPV4ONLY);
+                return OptionC(NN_SOL_SOCKET, NN_IPV4ONLY);
 
             case socketName:
-                return NanoOptionC(NN_SOL_SOCKET, NN_SOCKET_NAME);
+                return OptionC(NN_SOL_SOCKET, NN_SOCKET_NAME);
 
             case timeToLive:
-                return NanoOptionC(NN_SOL_SOCKET, NN_TTL);
+                return OptionC(NN_SOL_SOCKET, NN_TTL);
 
             case subscribeTopic:
-                return NanoOptionC(NN_SUB, NN_SUB_SUBSCRIBE);
+                return OptionC(NN_SUB, NN_SUB_SUBSCRIBE);
 
             case unsubscribeTopic:
-                return NanoOptionC(NN_SUB, NN_SUB_UNSUBSCRIBE);
+                return OptionC(NN_SUB, NN_SUB_UNSUBSCRIBE);
 
             case tcpNoDelay:
-                return NanoOptionC(NN_TCP, NN_TCP_NODELAY);
+                return OptionC(NN_TCP, NN_TCP_NODELAY);
 
             case surveyorDeadlineMs:
-                return NanoOptionC(NN_SURVEYOR, NN_SURVEYOR_DEADLINE);
+                return OptionC(NN_SURVEYOR, NN_SURVEYOR_DEADLINE);
         }
     }
 
@@ -269,18 +273,18 @@ private:
 
 @("set/get option")
 unittest {
-    auto sock = NanoSocket(NanoProtocol.subscribe);
-    sock.getOption!int(NanoOption.sendTimeoutMs).shouldEqual(-1);
-    sock.setOption(NanoOption.sendTimeoutMs, 42);
-    sock.getOption!int(NanoOption.sendTimeoutMs).shouldEqual(42);
+    auto sock = NanoSocket(NanoSocket.Protocol.subscribe);
+    sock.getOption!int(NanoSocket.Option.sendTimeoutMs).shouldEqual(-1);
+    sock.setOption(NanoSocket.Option.sendTimeoutMs, 42);
+    sock.getOption!int(NanoSocket.Option.sendTimeoutMs).shouldEqual(42);
 }
 
 @("pub/sub")
 unittest {
     const uri = "inproc://test_pubsub";
-    auto pub = NanoSocket(NanoProtocol.publish, BindTo(uri));
-    auto sub = NanoSocket(NanoProtocol.subscribe, ConnectTo(uri));
-    sub.setOption(NanoOption.subscribeTopic, "foo");
+    auto pub = NanoSocket(NanoSocket.Protocol.publish, BindTo(uri));
+    auto sub = NanoSocket(NanoSocket.Protocol.subscribe, ConnectTo(uri));
+    sub.setOption(NanoSocket.Option.subscribeTopic, "foo");
 
     // messages that start with the subscription topic should be received
     pub.send("foo/hello");
@@ -291,7 +295,7 @@ unittest {
     sub.receive(No.blocking).shouldBeEmpty;
 
     // after unsubscribing, messages are no longer received
-    sub.setOption(NanoOption.unsubscribeTopic, "foo");
+    sub.setOption(NanoSocket.Option.unsubscribeTopic, "foo");
     pub.send("foo/hello");
     sub.receive(No.blocking).shouldBeEmpty;
 }
@@ -300,15 +304,45 @@ unittest {
 @("req/rep")
 unittest {
     const uri = "inproc://test_reqrep";
-    auto responder = NanoSocket(NanoProtocol.response, BindTo(uri));
-    auto requester = NanoSocket(NanoProtocol.request, ConnectTo(uri));
+    auto responder = NanoSocket(NanoSocket.Protocol.response, BindTo(uri));
+    auto requester = NanoSocket(NanoSocket.Protocol.request, ConnectTo(uri));
 
     enum timeoutMs = 50;
-    responder.setOption(NanoOption.receiveTimeoutMs, timeoutMs);
-    requester.setOption(NanoOption.receiveTimeoutMs, timeoutMs);
+    responder.setOption(NanoSocket.Option.receiveTimeoutMs, timeoutMs);
+    requester.setOption(NanoSocket.Option.receiveTimeoutMs, timeoutMs);
 
     requester.send("shake?");
     responder.receive(Yes.blocking).shouldEqual("shake?");
     responder.send("yep!");
     requester.receive(Yes.blocking).shouldEqual("yep!");
 }
+
+// @("push/pull over TCP")
+// unittest {
+//     auto pull = NanoSocket.createBound(NanoSocket.Protocol.pull, "tcp://localhost:13248");
+//     auto push = NanoSocket.createConnected(NanoSocket.Protocol.push, "tcp://localhost:13248");
+
+//     enum numTimes = 10;
+
+//     foreach(i; 0 .. numTimes)
+//         push.send("foo");
+
+//     foreach(i; 0 .. numTimes)
+//         pull.receive(No.blocking).shouldEqual("foo");
+// }
+
+
+// @HiddenTest // it's here to show that this can fail, but it doesn't always
+// @("push/pull over IPC")
+// unittest {
+//     auto pull = NanoSocket.createBound(NanoSocket.Protocol.pull, "ipc://nanomsg_ipc_push_pull_test");
+//     auto push = NanoSocket.createConnected(NanoSocket.Protocol.push, "ipc://nanomsg_ipc_push_pull_test");
+
+//     enum numTimes = 5;
+
+//     foreach(i; 0 .. numTimes)
+//         push.send("foo");
+
+//     foreach(i; 0 .. numTimes)
+//         pull.receive(No.blocking).shouldEqual("foo");
+// }
