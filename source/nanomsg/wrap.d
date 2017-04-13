@@ -92,6 +92,7 @@ struct NanoSocket {
         }
 
         _nanoSock = nn_socket(domain, protocolToInt(protocol));
+        _protocol = protocol;
         enforceNanoMsgRet(_nanoSock);
     }
 
@@ -147,9 +148,21 @@ struct NanoSocket {
         return numBytes >= 0 ? buf[0 .. numBytes].dup : [];
     }
 
-    int send(T)(T[] data, Flag!"blocking" blocking = Yes.blocking) const {
-        const int flags = blocking ? 0 : NN_DONTWAIT;
-        return nn_send(_nanoSock, data.ptr, data.length, flags);
+    /**
+       Sends the bytes as expected. If the protocol is Request, then returns
+       the response, otherwise returns an empty array.
+     */
+    ubyte[] send(T)(T[] data, Flag!"blocking" blocking = Yes.blocking) const {
+        import std.exception: enforce;
+        import std.conv: text;
+
+        const sent = nn_send(_nanoSock, data.ptr, data.length, flags(blocking));
+        if(blocking)
+            enforce(sent == data.length,
+                    text("Expected to send ", data.length, " bytes but sent ", sent));
+
+        return _protocol == Protocol.request ? receive(blocking) : [];
+
     }
 
     void connect(in string uri) @trusted const {
@@ -165,6 +178,7 @@ struct NanoSocket {
 private:
 
     int _nanoSock = INVALID_FD;
+    Protocol _protocol;
 
     void enforceNanoMsgRet(E)(lazy E expr, string file = __FILE__, size_t line = __LINE__) const {
         import std.conv: text;
@@ -269,6 +283,10 @@ private:
                 text("getsockopt returned ", length, " but sizeof(", T.stringof, ") is ", T.sizeof));
         return val;
     }
+
+    static int flags(Flag!"blocking" blocking) @safe pure {
+        return blocking ? 0 : NN_DONTWAIT;
+    }
 }
 
 @("set/get option")
@@ -303,18 +321,43 @@ unittest {
 
 @("req/rep")
 unittest {
+    import std.concurrency: spawnLinked, send;
+
     const uri = "inproc://test_reqrep";
-    auto responder = NanoSocket(NanoSocket.Protocol.response, BindTo(uri));
-    auto requester = NanoSocket(NanoSocket.Protocol.request, ConnectTo(uri));
+    const requester = NanoSocket(NanoSocket.Protocol.request, ConnectTo(uri));
 
     enum timeoutMs = 50;
-    responder.setOption(NanoSocket.Option.receiveTimeoutMs, timeoutMs);
     requester.setOption(NanoSocket.Option.receiveTimeoutMs, timeoutMs);
 
-    requester.send("shake?");
-    responder.receive(Yes.blocking).shouldEqual("shake?");
-    responder.send("yep!");
-    requester.receive(Yes.blocking).shouldEqual("yep!");
+    auto tid = spawnLinked(&responder, uri, timeoutMs);
+    requester.send("shake?").shouldEqual("shake? yep!");
+    tid.send(Stop());
+}
+
+version(unittest) {
+    import std.concurrency: Tid;
+
+    struct Respond { string value; }
+    struct Stop {}
+
+    void responder(in string uri, in int timeoutMs) {
+        import std.concurrency: receiveTimeout;
+        import std.datetime: msecs;
+
+        const socket = NanoSocket(NanoSocket.Protocol.response, BindTo(uri));
+        socket.setOption(NanoSocket.Option.receiveTimeoutMs, timeoutMs);
+
+        for(bool done; !done;) {
+            receiveTimeout(10.msecs,
+                (Stop _) {
+                    done = true;
+                },
+            );
+
+            const bytes = socket.receive(No.blocking);
+            if(bytes.length) socket.send(bytes ~ cast(ubyte[])" yep!");
+        }
+    }
 }
 
 // @("push/pull over TCP")
