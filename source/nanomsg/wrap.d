@@ -406,6 +406,8 @@ version(unittest) {
 
 @("push/pull over TCP")
 unittest {
+    import core.thread: Thread, msecs;
+
     auto pull = NanoSocket(NanoSocket.Protocol.pull, BindTo("tcp://localhost:13248"));
     auto push = NanoSocket(NanoSocket.Protocol.push, ConnectTo("tcp://localhost:13248"));
 
@@ -413,6 +415,8 @@ unittest {
 
     foreach(i; 0 .. numTimes)
         push.send("foo");
+
+    Thread.sleep(50.msecs);
 
     foreach(i; 0 .. numTimes)
         pull.receive(No.blocking).shouldEqual("foo");
