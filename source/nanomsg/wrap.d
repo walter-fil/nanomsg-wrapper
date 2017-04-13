@@ -118,7 +118,11 @@ struct NanoSocket {
         }
     }
 
-    ~this() @trusted {
+    ~this() @safe {
+        close;
+    }
+
+    void close() @trusted {
         if(_nanoSock != INVALID_FD) {
             _nanoSock.nn_close;
         }
