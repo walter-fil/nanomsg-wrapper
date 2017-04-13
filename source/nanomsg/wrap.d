@@ -392,32 +392,32 @@ version(unittest) {
     }
 }
 
-// @("push/pull over TCP")
-// unittest {
-//     auto pull = NanoSocket.createBound(NanoSocket.Protocol.pull, "tcp://localhost:13248");
-//     auto push = NanoSocket.createConnected(NanoSocket.Protocol.push, "tcp://localhost:13248");
+@("push/pull over TCP")
+unittest {
+    auto pull = NanoSocket(NanoSocket.Protocol.pull, BindTo("tcp://localhost:13248"));
+    auto push = NanoSocket(NanoSocket.Protocol.push, ConnectTo("tcp://localhost:13248"));
 
-//     enum numTimes = 10;
+    enum numTimes = 10;
 
-//     foreach(i; 0 .. numTimes)
-//         push.send("foo");
+    foreach(i; 0 .. numTimes)
+        push.send("foo");
 
-//     foreach(i; 0 .. numTimes)
-//         pull.receive(No.blocking).shouldEqual("foo");
-// }
+    foreach(i; 0 .. numTimes)
+        pull.receive(No.blocking).shouldEqual("foo");
+}
 
 
-// @HiddenTest // it's here to show that this can fail, but it doesn't always
-// @("push/pull over IPC")
-// unittest {
-//     auto pull = NanoSocket.createBound(NanoSocket.Protocol.pull, "ipc://nanomsg_ipc_push_pull_test");
-//     auto push = NanoSocket.createConnected(NanoSocket.Protocol.push, "ipc://nanomsg_ipc_push_pull_test");
+@HiddenTest // it's here to show that this can fail, but it doesn't always
+@("push/pull over IPC")
+unittest {
+    auto pull = NanoSocket(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_push_pull_test"));
+    auto push = NanoSocket(NanoSocket.Protocol.push, ConnectTo("ipc://nanomsg_ipc_push_pull_test"));
 
-//     enum numTimes = 5;
+    enum numTimes = 5;
 
-//     foreach(i; 0 .. numTimes)
-//         push.send("foo");
+    foreach(i; 0 .. numTimes)
+        push.send("foo");
 
-//     foreach(i; 0 .. numTimes)
-//         pull.receive(No.blocking).shouldEqual("foo");
-// }
+    foreach(i; 0 .. numTimes)
+        pull.receive(No.blocking).shouldEqual("foo");
+}
