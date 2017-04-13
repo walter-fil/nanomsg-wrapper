@@ -196,21 +196,50 @@ struct NanoSocket {
         return _protocol == Protocol.request ? receive(recvBlocking) : [];
     }
 
-
-    void connect(in string uri) @trusted const {
+    void connect(in string uri, in string file = __FILE__, in size_t line = __LINE__) {
         import std.string: toStringz;
-        enforceNanoMsgRet(nn_connect(_nanoSock, uri.toStringz));
+        enforceNanoMsgRet(nn_connect(_nanoSock, uri.toStringz), file, line);
+        _uri = uri;
+        _connection = Connection.connected;
     }
 
-    void bind(in string uri) @trusted const {
+    void bind(in string uri, in string file = __FILE__, in size_t line = __LINE__) {
         import std.string: toStringz;
-        enforceNanoMsgRet(nn_bind(_nanoSock, uri.toStringz));
+        enforceNanoMsgRet(nn_bind(_nanoSock, uri.toStringz), file, line);
+        _uri = uri;
+        _connection = Connection.bound;
+    }
+
+    Protocol protocol() @safe @nogc pure const nothrow {
+        return _protocol;
+    }
+
+    string uri() @safe @nogc pure const nothrow {
+        return _uri;
+    }
+
+    string toString() @safe pure const {
+        import std.conv: text;
+
+        if(_connection == Connection.none)
+            return text(protocol);
+
+        const connText = _connection == Connection.bound ? "@" : "@@";
+        return text(_protocol, connText, _uri);
     }
 
 private:
 
+    enum Connection {
+        none,
+        bound,
+        connected,
+    }
+
     int _nanoSock = INVALID_FD;
     Protocol _protocol;
+    string _uri;
+    Connection _connection;
 
     void enforceNanoMsgRet(E)(lazy E expr, string file = __FILE__, size_t line = __LINE__) const {
         import std.conv: text;
