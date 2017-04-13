@@ -321,6 +321,18 @@ private:
     }
 }
 
+void checkNanoSocket(T)() {
+    T s = T(NanoSocket.Protocol.subscribe, ConnectTo("foobar"));
+    s.send("foobar");
+    s.setOption(NanoSocket.Option.subscribeTopic, "topic");
+    s.setOption(NanoSocket.Option.receiveTimeoutMs, 100);
+    ubyte[] msg = s.receive(Yes.blocking);
+    s.send(msg);
+}
+enum isNanoSocket(T) = is(typeof(checkNanoSocket!T));
+static assert(isNanoSocket!NanoSocket);
+
+
 @("set/get option")
 unittest {
     auto sock = NanoSocket(NanoSocket.Protocol.subscribe);
