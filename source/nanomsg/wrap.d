@@ -128,9 +128,10 @@ struct NanoSocket {
         }
     }
 
-    void setOption(T)(Option option, T val) const {
+    ref inout(NanoSocket) setOption(T)(Option option, T val) inout {
         const optionC = toOptionC(option);
         setOption(optionC.level, optionC.option, val);
+        return this;
     }
 
     T getOption(T)(Option option) const {
