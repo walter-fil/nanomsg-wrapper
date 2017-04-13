@@ -165,6 +165,33 @@ struct NanoSocket {
 
     }
 
+    /**
+     Tries to send bytes to the other side.
+     duration is how long to try for
+     recvBlocking controls whether or not to block on reception of a response.
+     This only matters when the protocol is request/response
+     Returns the response if in request mode, otherwise an empty byte slice.
+     */
+    ubyte[] trySend(T)(T[] data, Duration duration, Flag!"blocking" recvBlocking = Yes.blocking) {
+        import std.exception: enforce;
+        import std.datetime: StopWatch, AutoStart, msecs;
+        import std.conv: text;
+        import core.thread: Thread;
+
+        int sent;
+        auto sw = StopWatch(AutoStart.yes);
+        do {
+            sent = nn_send(_nanoSock, data.ptr, data.length, flags(No.blocking));
+            if(sent != data.length) Thread.sleep(10.msecs); // play nice with other threads and the CPU
+        } while(sent != data.length && cast(Duration)sw.peek < duration);
+
+        enforce(sent == data.length,
+                text("Expected to send ", data.length, " bytes but sent ", sent));
+
+        return _protocol == Protocol.request ? receive(recvBlocking) : [];
+    }
+
+
     void connect(in string uri) @trusted const {
         import std.string: toStringz;
         enforceNanoMsgRet(nn_connect(_nanoSock, uri.toStringz));
