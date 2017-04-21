@@ -449,7 +449,10 @@ unittest {
     tid.send(Stop());
 }
 
-/// Example:
+/**
+    Example:
+        utility function
+*/
 version(unittest) {
     import std.concurrency: Tid;
 

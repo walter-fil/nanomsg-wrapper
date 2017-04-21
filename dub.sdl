@@ -1,6 +1,6 @@
 name "nanomsg-wrapper"
 description "Nanomsg wrappers for the D Programming Language."
-homepage "https://github.com/atilaneves/d-nanomsg"
+homepage "http://nanomsg.code.kaleidic.io"
 authors "Laeeth Isharc" "Atila Neves"
 license "Boost-1.0"
 targetType "library"
@@ -11,7 +11,6 @@ systemDependencies "nanomsg: if you have a static build of nanomsg installed, \
 libs "nanomsg"
 
 configuration "library" {
-   versions "Build"
 }
 
 configuration "unittest" {
@@ -20,5 +19,4 @@ configuration "unittest" {
     dependency "unit-threaded" version="~>0.7.0"
     preBuildCommands "dub run unit-threaded -c gen_ut_main -- -f bin/ut.d"
     mainSourceFile "bin/ut.d"
-    versions "Build"
 }
