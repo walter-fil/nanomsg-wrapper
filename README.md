@@ -4,9 +4,13 @@ D Language wrapper and bindings for [nanomsg](http://nanomsg.org/documentation.h
 * Modified by Atila Neves
 
 [Generated documentation](http://nanomsg.code.kaleidic.io/nanomsg.html)
+
 [Examples 1](http://nanomsg.code.kaleidic.io/nanomsg.wrap.responder.html)
+
 [Examples 2](http://nanomsg.code.kaleidic.io/nanomsg.wrap.checkNanoSocket.html)
+
 [Low Level Examples](http://nanomsg.code.kaleidic.io/examples/nanomsg.examples.html)
+
 
 status
 -------
