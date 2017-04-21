@@ -9,7 +9,8 @@ D Language wrapper and bindings for [nanomsg](http://nanomsg.org/documentation.h
 
 [Examples 2](http://nanomsg.code.kaleidic.io/nanomsg.wrap.checkNanoSocket.html)
 
-[Low Level Examples](http://nanomsg.code.kaleidic.io/examples/nanomsg.examples.html)
+Low Level Examples [Docs](http://nanomsg.code.kaleidic.io/examples/nanomsg.examples.html)
+[Code] (https://github.com/kaleidicassociates/nanomsg-wrapper/tree/master/examples)
 
 
 status
