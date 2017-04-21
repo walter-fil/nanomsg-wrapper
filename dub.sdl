@@ -11,6 +11,7 @@ systemDependencies "nanomsg: if you have a static build of nanomsg installed, \
 libs "nanomsg"
 
 configuration "library" {
+   versions "Build"
 }
 
 configuration "unittest" {
@@ -19,4 +20,5 @@ configuration "unittest" {
     dependency "unit-threaded" version="~>0.7.0"
     preBuildCommands "dub run unit-threaded -c gen_ut_main -- -f bin/ut.d"
     mainSourceFile "bin/ut.d"
+    versions "Build"
 }

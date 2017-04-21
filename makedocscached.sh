@@ -6,12 +6,12 @@ mkdir -p docs
 cd ~
 mkdir -p tmp
 cd tmp
-rm -rf adrdox
-git clone https://github.com/adamdruppe/adrdox
+#rm -rf adrdox
+#git clone https://github.com/adamdruppe/adrdox
 cp ${kal_project_dir}/.skeleton.html adrdox/skeleton.html
 mkdir -p ${kal_project_dir}/docs/examples
 cd adrdox
-make
+#make
 ./doc2 -i ${source_dir}
 mv generated-docs/* ${kal_project_dir}/docs
 ./doc2 -i ${kal_project_dir}/examples
