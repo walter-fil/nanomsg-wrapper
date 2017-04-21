@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+        <title>checkNanoSocket (nanomsg.wrap.checkNanoSocket)</title>
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="stylesheet" href="style.css" />
+        <script src="script.js" type="text/javascript"></script>
+
+	
+	<link rel="prefetch" href="search-results.html" />
+</head>
+<body>
+	<div id="page-header">
+		<div id="logotype">
+		<span>Documentation</span>
+		<nav>
+			<a href="http://nanomsg.code.kaleidic.io/">Kaleidic Associates Open Source - Nanomsg</a>
+			<a href="https://github.com/kaleidicassociates/nanomsg-wrapper/">Github - nanomsg-wrapper for D</a>
+		</nav>
+		</div>
+
+		<form id="search" action="search-docs.html">
+			<input placeholder="Find a symbol name..." name="searchTerm" type="search" />
+			<input type="submit" value="Go" />
+		</form>
+	</div>
+	<div id="page-body">
+		<div id="page-content">
+		<h1>checkNanoSocket</h1><div class="breadcrumbs"><a href="nanomsg.html" class="breadcrumb">nanomsg</a><a href="nanomsg.wrap.html" class="breadcrumb">wrap</a></div><div><div class="documentation-comment synopsis"><div><p>check nanomsg socket</p></div></div></div><div class="annotated-prototype"><div class="function-prototype"><a id="help-link" href="http://dpldocs.info/reading-prototypes">?</a><div class="attributes"></div><div class="return-type"><span class="builtin-type">void</span></div><div class="function-name">checkNanoSocket</div><div class="template-parameters">(<div class="parameters-list toplevel"><div class="template-parameter-item parameter-item">	<span><span data-ident="T" class="name">T</span></span></div></div>)</div><div class="runtime-parameters">(<div class="parameters-list toplevel"></div>)</div><div class="function-contracts"></div></div></div><div><h2 id="examples"><a href="#examples" class="header-anchor">Examples</a></h2><div class="documentation-comment"><div></div></div><div class="unittest-example-holder"><div class="documentation-comment"><p>Examples:
+*/
+/// set/get option
+//</p></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">auto</span> <span class="hid">sock</span> = <span class="hid">NanoSocket</span>(<span class="hid">NanoSocket</span>.<span class="hid">Protocol</span>.<span class="hid">subscribe</span>);
+<span class="br">2 </span><span class="hid">sock</span>.<span class="hid">getOption</span>!<span class="type">int</span>(<span class="hid">NanoSocket</span>.<span class="hid">Option</span>.<span class="hid">sendTimeoutMs</span>).<span class="hid">shouldEqual</span>(-<span class="num">1</span>);
+<span class="br">3 </span><span class="hid">sock</span>.<span class="hid">setOption</span>(<span class="hid">NanoSocket</span>.<span class="hid">Option</span>.<span class="hid">sendTimeoutMs</span>, <span class="num">42</span>);
+<span class="br">4 </span><span class="hid">sock</span>.<span class="hid">getOption</span>!<span class="type">int</span>(<span class="hid">NanoSocket</span>.<span class="hid">Option</span>.<span class="hid">sendTimeoutMs</span>).<span class="hid">shouldEqual</span>(<span class="num">42</span>);
+</pre></div><div class="unittest-example-holder"><div class="documentation-comment"><p>publish/subscribe</p></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">const</span> <span class="hid">uri</span> = <span class="str">&quot;inproc://test_pubsub&quot;</span>;
+<span class="br">2 </span><span class="kwrd">auto</span> <span class="hid">pub</span> = <span class="hid">NanoSocket</span>(<span class="hid">NanoSocket</span>.<span class="hid">Protocol</span>.<span class="hid">publish</span>, <span class="hid">BindTo</span>(<span class="hid">uri</span>));
+<span class="br">3 </span><span class="kwrd">auto</span> <span class="hid">sub</span> = <span class="hid">NanoSocket</span>(<span class="hid">NanoSocket</span>.<span class="hid">Protocol</span>.<span class="hid">subscribe</span>, <span class="hid">ConnectTo</span>(<span class="hid">uri</span>));
+<span class="br">4 </span><span class="hid">sub</span>.<span class="hid">setOption</span>(<span class="hid">NanoSocket</span>.<span class="hid">Option</span>.<span class="hid">subscribeTopic</span>, <span class="str">&quot;foo&quot;</span>);
+<span class="br">5 </span>
+<span class="br">6 </span><span class="com">// messages that start with the subscription topic should be received</span>
+<span class="br">7 </span><span class="hid">pub</span>.<span class="hid">send</span>(<span class="str">&quot;foo/hello&quot;</span>);
+<span class="br">8 </span><span class="hid">sub</span>.<span class="hid">receive</span>(<span class="hid">No</span>.<span class="hid">blocking</span>).<span class="hid">shouldEqual</span>(<span class="str">&quot;foo/hello&quot;</span>);
+<span class="br">9 </span>
+<span class="br">10 </span><span class="com">// but not messages that don't</span>
+<span class="br">11 </span><span class="hid">pub</span>.<span class="hid">send</span>(<span class="str">&quot;bar/oops&quot;</span>);
+<span class="br">12 </span><span class="hid">sub</span>.<span class="hid">receive</span>(<span class="hid">No</span>.<span class="hid">blocking</span>).<span class="hid">shouldBeEmpty</span>;
+<span class="br">13 </span>
+<span class="br">14 </span><span class="com">// after unsubscribing, messages are no longer received</span>
+<span class="br">15 </span><span class="hid">sub</span>.<span class="hid">setOption</span>(<span class="hid">NanoSocket</span>.<span class="hid">Option</span>.<span class="hid">unsubscribeTopic</span>, <span class="str">&quot;foo&quot;</span>);
+<span class="br">16 </span><span class="hid">pub</span>.<span class="hid">send</span>(<span class="str">&quot;foo/hello&quot;</span>);
+<span class="br">17 </span><span class="hid">sub</span>.<span class="hid">receive</span>(<span class="hid">No</span>.<span class="hid">blocking</span>).<span class="hid">shouldBeEmpty</span>;
+</pre></div><div class="unittest-example-holder"><div class="documentation-comment"><p>request/response</p></div><pre class="d_code highlighted with-line-wrappers"><span class="br">1 </span><span class="kwrd">import</span> <span class="hid">std</span>.<span class="hid">concurrency</span>: <span class="hid">spawnLinked</span>, <span class="hid">send</span>;
+<span class="br">2 </span>
+<span class="br">3 </span><span class="kwrd">const</span> <span class="hid">uri</span> = <span class="str">&quot;inproc://test_reqrep&quot;</span>;
+<span class="br">4 </span><span class="kwrd">const</span> <span class="hid">requester</span> = <span class="hid">NanoSocket</span>(<span class="hid">NanoSocket</span>.<span class="hid">Protocol</span>.<span class="hid">request</span>, <span class="hid">ConnectTo</span>(<span class="hid">uri</span>));
+<span class="br">5 </span>
+<span class="br">6 </span><span class="kwrd">enum</span> <span class="hid">timeoutMs</span> = <span class="num">50</span>;
+<span class="br">7 </span><span class="hid">requester</span>.<span class="hid">setOption</span>(<span class="hid">NanoSocket</span>.<span class="hid">Option</span>.<span class="hid">receiveTimeoutMs</span>, <span class="hid">timeoutMs</span>);
+<span class="br">8 </span>
+<span class="br">9 </span><span class="kwrd">auto</span> <span class="hid">tid</span> = <span class="hid">spawnLinked</span>(&amp;<span class="hid">responder</span>, <span class="hid">uri</span>, <span class="hid">timeoutMs</span>);
+<span class="br">10 </span><span class="hid">requester</span>.<span class="hid">send</span>(<span class="str">&quot;shake?&quot;</span>).<span class="hid">shouldEqual</span>(<span class="str">&quot;shake? yep!&quot;</span>);
+<span class="br">11 </span><span class="hid">tid</span>.<span class="hid">send</span>(<span class="hid">Stop</span>());
+</pre></div><h2 id="meta"><a href="#meta" class="header-anchor">Meta</a></h2><div class="documentation-comment source-section other-section"><h3 id="source"><a href="#source" class="header-anchor">Source</a></h3><div><p><a href="source/nanomsg.wrap.d.html#L388">See Implementation</a><br /></p></div></div></div></div>
+		<div id="page-nav"><a href="nanomsg.html" class="parent">nanomsg</a><a href="nanomsg.wrap.html" class="parent">wrap</a>
+		<span class="type-separator">functions</span><ul><li><a href="nanomsg.wrap.checkNanoSocket.html" class="function current">checkNanoSocket</a></li><li><a href="nanomsg.wrap.responder.html" class="function">responder</a></li></ul><span class="type-separator">structs</span><ul><li><a href="nanomsg.wrap.BindTo.html" class="struct">BindTo</a></li><li><a href="nanomsg.wrap.ConnectTo.html" class="struct">ConnectTo</a></li><li><a href="nanomsg.wrap.NanoSocket.html" class="struct">NanoSocket</a></li><li><a href="nanomsg.wrap.Respond.html" class="struct">Respond</a></li><li><a href="nanomsg.wrap.Stop.html" class="struct">Stop</a></li></ul></div>
+	</div>
+	<div id="page-footer">Page generated by <a href="https://github.com/adamdruppe/adrdox">adrdox</a></div>
+</body>
+</html>

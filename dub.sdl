@@ -1,6 +1,6 @@
 name "nanomsg-wrapper"
 description "Nanomsg wrappers for the D Programming Language."
-homepage "https://github.com/atilaneves/d-nanomsg"
+homepage "http://nanomsg.code.kaleidic.io"
 authors "Laeeth Isharc" "Atila Neves"
 license "Boost-1.0"
 targetType "library"

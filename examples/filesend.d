@@ -1,12 +1,20 @@
-import kaleidic.nanomsg.nano;
+/**
+    Nanomsg Example: Filesend
+*/
+module nanomsg.examples.filesend;
+
+import nanomsg;
 import std.stdio;
 import std.conv;
 import std.file;
 import std.string:toStringz;
 
+///
 enum NODE0 ="node0";
+///
 enum NODE1 ="node1";
 
+///
 int node0 (string xurl)
 {
   int sock = nn_socket (AF_SP, NN_PULL);
@@ -24,6 +32,7 @@ int node0 (string xurl)
     return 0;
 }
 
+///
 int sendfile(string url, string filename)
 {
   auto msg=cast(char[])read(filename);
@@ -35,8 +44,9 @@ int sendfile(string url, string filename)
   int bytes = nn_send(sock, msg.toStringz, sz_msg, 0);
   assert(bytes == sz_msg);
   return nn_shutdown(sock, 0);
-
 }
+
+///
 int main (string[] argv)
 {
   if (argv.length>1)

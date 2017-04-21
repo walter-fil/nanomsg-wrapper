@@ -1,11 +1,18 @@
+/**
+    Nanomsg Example: Pair
+*/
+module nanomsg.examples.pair;
 import std.stdio;
 import core.thread;
 import std.conv;
-import kaleidic.nanomsg.nano;
+import nanomsg;
 
+///
 enum NODE0 ="node0";
+///
 enum NODE1 ="node1";
 
+///
 int send_name(int sock, string name)
 {
   writefln("%s: SENDING \"%s\"\n", name, name);
@@ -13,6 +20,7 @@ int send_name(int sock, string name)
   return nn_send (sock, cast(char*)name, sz_n, 0);
 }
 
+///
 int recv_name(int sock, string name)
 {
   char *buf = cast(char*)0;
@@ -25,6 +33,7 @@ int recv_name(int sock, string name)
   return result;
 }
 
+///
 void send_recv(int sock, string name)
 {
   int to = 100;
@@ -37,6 +46,7 @@ void send_recv(int sock, string name)
     }
 }
 
+///
 int node0(string url)
 {
   int sock = nn_socket (AF_SP, NN_PAIR);
@@ -46,6 +56,7 @@ int node0(string url)
   return nn_shutdown (sock, 0);
 }
 
+///
 int node1(string url)
 {
   int sock = nn_socket (AF_SP, NN_PAIR);

@@ -1,11 +1,17 @@
+/**
+    Nanomsg Example: Bus
+*/
+module nanomsg.examples.bus;
+
 import std.stdio;
 import std.datetime;
 import std.conv;
 import core.thread;
-import kaleidic.nanomsg.nano;
+import nanomsg;
 import std.string:toStringz;
 
 
+///
 int node (string[] argv)
 {
   int sock = nn_socket (AF_SP, NN_BUS);
@@ -39,10 +45,14 @@ int node (string[] argv)
   return nn_shutdown (sock, 0);
 }
 
-string tostring(char* buf) // weird behaviour so broke this out to a function
+// weird behaviour so broke this out to a function
+///
+string tostring(char* buf)
 {
   return to!string(buf);
 }
+
+///
 int main (string[] argv)
 {
   if (argv.length>= 3) node(argv);

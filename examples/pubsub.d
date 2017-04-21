@@ -1,17 +1,26 @@
+/**
+    Nanomsg Example: Pubsub
+*/
+module nanomsg.examples.pubsub;
+
 import std.stdio;
 import std.datetime;
 import core.thread;
-import kaleidic.nanomsg.nano;
+import nanomsg;
 import std.string:toStringz;
 
+///
 enum SERVER ="server";
+///
 enum CLIENT ="client";
 
+///
 string date ()
 {
   return Clock.currTime.toSimpleString();
 }
 
+///
 int server (string surl)
 {
   auto url=surl.toStringz;
@@ -30,6 +39,7 @@ int server (string surl)
   return nn_shutdown (sock, 0);
 }
 
+///
 int client (string surl, string sname)
 {
   auto url=surl.toStringz;
@@ -50,6 +60,7 @@ int client (string surl, string sname)
   return nn_shutdown (sock, 0);
 }
 
+///
 int main (string[] argv)
 {
   if (argv.length>=2)
