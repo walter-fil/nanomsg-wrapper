@@ -6,6 +6,11 @@
 
     Authors: Laeeth Isharc and Atila Neves (Kaleidic Associates Advisory Limited)
 
+    Example code:
+        http://nanomsg.code.kaleidic.io/nanomsg.wrap.responder.html
+        http://nanomsg.code.kaleidic.io/nanomsg.wrap.checkNanoSocket.html
+        http://nanomsg.code.kaleidic.io/examples/nanomsg.examples.html
+
  */
 module nanomsg.wrap;
 
@@ -391,7 +396,10 @@ void checkNanoSocket(T)() {
 enum isNanoSocket(T) = is(typeof(checkNanoSocket!T));
 static assert(isNanoSocket!NanoSocket);
 
-
+/**
+        Examples:
+*/
+/// set/get option
 ///
 @("set/get option")
 unittest {
@@ -401,6 +409,7 @@ unittest {
     sock.getOption!int(NanoSocket.Option.sendTimeoutMs).shouldEqual(42);
 }
 
+/// publish/subscribe
 ///
 @("pub/sub")
 unittest {
@@ -423,7 +432,7 @@ unittest {
     sub.receive(No.blocking).shouldBeEmpty;
 }
 
-
+/// request/response
 ///
 @("req/rep")
 unittest {
@@ -440,13 +449,16 @@ unittest {
     tid.send(Stop());
 }
 
-///
+/// Example:
 version(unittest) {
     import std.concurrency: Tid;
 
+    /// utility struct for unit test
     struct Respond { string value; }
+    /// utility struct for unit test
     struct Stop {}
 
+    /// utility function for unit tests/examples
     void responder(in string uri, in int timeoutMs) {
         import std.concurrency: receiveTimeout;
         import std.datetime: msecs;
@@ -467,7 +479,10 @@ version(unittest) {
     }
 }
 
-///
+/**
+    Example:
+        push/pull over TCP
+*/
 @("push/pull over TCP")
 unittest {
     import core.thread: Thread, msecs;
@@ -486,8 +501,10 @@ unittest {
         pull.receive(No.blocking).shouldEqual("foo");
 }
 
-
-///
+/**
+    Example:
+        push/pull over IPC
+*/
 @HiddenTest /// it's here to show that this can fail, but it doesn't always
 @("push/pull over IPC")
 unittest {
