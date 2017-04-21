@@ -1,18 +1,28 @@
+/**
+    Nanomsg Example: ReqRep
+*/
+module nanomsg.examples.reqrep;
+
 import std.stdio;
 import std.conv;
 import std.datetime;
 import core.thread;
-import kaleidic.nanomsg.nano;
+import nanomsg;
 
+///
 string date ()
 {
   return Clock.currTime.toSimpleString();
 }
 
+///
 enum NODE0="node0";
+///
 enum NODE1="node1";
+///
 enum DATE="DATE";
 
+///
 int node0(string surl)
 {
   char* url=cast(char*)surl;
@@ -40,6 +50,7 @@ int node0(string surl)
 }
 
 
+///
 int node1 (string url)
 {
   int sz_date = cast(int)DATE.length+1;
@@ -59,6 +70,7 @@ int node1 (string url)
 }
 
  
+///
 int main(string[] argv)
 {
   if (argv.length>1)

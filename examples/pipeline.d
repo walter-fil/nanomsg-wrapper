@@ -1,11 +1,19 @@
-import kaleidic.nanomsg.nano;
+/**
+    Nanomsg Example: Pipeline
+*/
+module nanomsg.examples.pipeline;
+
+import nanomsg;
 import std.stdio;
 import std.conv;
 import std.string:toStringz;
 
+///
 enum NODE0 ="node0";
+///
 enum NODE1 ="node1";
 
+///
 int node0 (string xurl)
 {
   int sock = nn_socket (AF_SP, NN_PULL);
@@ -23,6 +31,7 @@ int node0 (string xurl)
     return 0;
 }
 
+///
 int node1 (string url, string msg)
 {
   int sz_msg = cast(int)msg.length + 1; // '\0' too
@@ -35,6 +44,7 @@ int node1 (string url, string msg)
   return nn_shutdown(sock, 0);
 }
 
+///
 int main (string[] argv)
 {
   if (argv.length>1)
