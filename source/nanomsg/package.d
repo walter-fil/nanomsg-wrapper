@@ -6,6 +6,7 @@
 
     Authors: Laeeth Isharc and Atila Neves (Kaleidic Associates Advisory Limited)
 
+	Documentation: http://nanomsg.code.kaleidic.io
     Examples: http://nanomsg.code.kaleidic.io/examples (currently low level only)
 
  */
