@@ -458,7 +458,7 @@ struct nn_socktype {
     int function(void *hint, nn_sockbase **sockbase) create;
     int function(int socktype) ispeer;
     nn_list_item* item;
-};
+}
 
 
 /**
@@ -504,7 +504,7 @@ align(1) union nn_req_handle
 {
     int i;
     void *ptr;
-};
+}
 
 extern(C) int nn_req_send (int s, nn_req_handle hndl, const(void)* buf, size_t len, int flags);
 extern(C) int nn_req_recv (int s, nn_req_handle *hndl, void *buf, size_t len, int flags);
@@ -559,7 +559,7 @@ struct nn_optset_vfptr
 struct nn_optset
 {
     const(nn_optset_vfptr)* vfptr;
-};
+}
 
 
 struct nn_epbase_vfptr
@@ -751,7 +751,7 @@ align(1) struct nn_list
 {
     nn_list_item* first;
     nn_list_item* last;
-};
+}
 
 /*  Undefined value for initializing a list item which is not part of a list. */
 enum NN_LIST_NOTINLIST = cast(const(nn_list_item)*)-1;
