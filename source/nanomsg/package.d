@@ -6,8 +6,11 @@
 
     Authors: Laeeth Isharc and Atila Neves (Kaleidic Associates Advisory Limited)
 
-	Documentation: http://nanomsg.code.kaleidic.io
-    Examples: http://nanomsg.code.kaleidic.io/examples/nanomsg.examples.html (currently low level only)
+	Documentation:
+		- http://nanomsg.code.kaleidic.io/nanomsg.html
+        - http://nanomsg.code.kaleidic.io/nanomsg.wrap.responder.html
+        - http://nanomsg.code.kaleidic.io/nanomsg.wrap.checkNanoSocket.html
+        - http://nanomsg.code.kaleidic.io/examples/nanomsg.examples.html
 
  */
 module nanomsg;
