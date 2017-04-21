@@ -1,8 +1,14 @@
 /**
- This module implements a D convenience API for nanomsg
- */
+    nanomsg is a socket library that provides several common communication patterns. It aims to make the networking layer fast, scalable, and easy to use.
+    Implemented in C, it works on a wide range of operating systems with no further dependencies.
+    
+    This module implements a convenience wrapper API for nanomsg
 
+    Authors: Laeeth Isharc and Atila Neves (Kaleidic Associates Advisory Limited)
+
+ */
 module nanomsg.wrap;
+
 
 import nanomsg.bindings;
 public import std.typecons: Yes, No; // to facilitate using send, receive
@@ -13,19 +19,27 @@ else
     enum HiddenTest;
 
 
+/// wrapper for a string uri to connect to
 struct ConnectTo {
     string uri;
 }
 
+/// wrapper for a string uri to bind to
 struct BindTo {
     string uri;
 }
 
+/**
+
+    NanoSocket - high level wrapper for a nanomsg socket
+
+*/
 struct NanoSocket {
 
     import std.traits: isArray;
     import std.typecons: Flag;
 
+    /// nanomsg protocol
     enum Protocol {
         request,
         response,
@@ -39,6 +53,7 @@ struct NanoSocket {
         bus,
     }
 
+    /// nanomsg socket options
     enum Option {
         lingerMs, /// How long to try and send pending messages after nn_close. -1 means infinite
         sendBufferSize, // Size of the send buffer in bytes
@@ -59,11 +74,13 @@ struct NanoSocket {
         surveyorDeadlineMs, /// How long to wait for responses in milliseconds
     }
 
-    // or else sockets would be destroyed
+    /// this(this) disabled to avoid sockets being destroyed
     @disable this(this);
 
+    /// invalid FD
     enum INVALID_FD = -1;
 
+    /// constructor
     this(Protocol protocol, int domain = AF_SP) @trusted {
 
         int protocolToInt(Protocol protocol) {
@@ -96,6 +113,7 @@ struct NanoSocket {
         enforceNanoMsgRet(_nanoSock);
     }
 
+    /// constructor
     this(in Protocol protocol, in BindTo bindTo, int domain = AF_SP) @trusted {
         import std.string: replace;
 
@@ -106,6 +124,7 @@ struct NanoSocket {
         bind(bindTo.uri.replace("localhost", "*"));
     }
 
+    /// constructor
     this(in Protocol protocol, in ConnectTo connectTo, int domain = AF_SP) @trusted {
 
         this(protocol, domain);
@@ -118,27 +137,32 @@ struct NanoSocket {
         }
     }
 
+    /// destructor
     ~this() @safe {
         close;
     }
 
+    /// close socket
     void close() @trusted {
         if(_nanoSock != INVALID_FD) {
             _nanoSock.nn_close;
         }
     }
 
+    /// set socket option to a value
     ref inout(NanoSocket) setOption(T)(Option option, T val) inout {
         const optionC = toOptionC(option);
         setOption(optionC.level, optionC.option, val);
         return this;
     }
 
+    /// get socket option value
     T getOption(T)(Option option) const {
         const optionC = toOptionC(option);
         return getOption!T(optionC.level, optionC.option);
     }
 
+    /// receive
     ubyte[] receive(int BUF_SIZE = 1024)(Flag!"blocking" blocking = Yes.blocking) const {
         import std.exception: enforce;
         import std.conv: text;
@@ -196,6 +220,7 @@ struct NanoSocket {
         return _protocol == Protocol.request ? receive(recvBlocking) : [];
     }
 
+    /// connect
     void connect(in string uri, in string file = __FILE__, in size_t line = __LINE__) {
         import std.string: toStringz;
         enforceNanoMsgRet(nn_connect(_nanoSock, uri.toStringz), file, line);
@@ -203,6 +228,7 @@ struct NanoSocket {
         _connection = Connection.connected;
     }
 
+    /// bind
     void bind(in string uri, in string file = __FILE__, in size_t line = __LINE__) {
         import std.string: toStringz;
         enforceNanoMsgRet(nn_bind(_nanoSock, uri.toStringz), file, line);
@@ -210,14 +236,17 @@ struct NanoSocket {
         _connection = Connection.bound;
     }
 
+    /// get protocol
     Protocol protocol() @safe @nogc pure const nothrow {
         return _protocol;
     }
 
+    /// get URI
     string uri() @safe @nogc pure const nothrow {
         return _uri;
     }
 
+    /// toString
     string toString() @safe pure const {
         import std.conv: text;
 
@@ -350,6 +379,7 @@ private:
     }
 }
 
+/// check nanomsg socket
 void checkNanoSocket(T)() {
     T s = T(NanoSocket.Protocol.subscribe, ConnectTo("foobar"));
     s.send("foobar");
@@ -362,6 +392,7 @@ enum isNanoSocket(T) = is(typeof(checkNanoSocket!T));
 static assert(isNanoSocket!NanoSocket);
 
 
+/// unittest - set/get option
 @("set/get option")
 unittest {
     auto sock = NanoSocket(NanoSocket.Protocol.subscribe);
@@ -370,6 +401,7 @@ unittest {
     sock.getOption!int(NanoSocket.Option.sendTimeoutMs).shouldEqual(42);
 }
 
+/// unittest - pub/sub
 @("pub/sub")
 unittest {
     const uri = "inproc://test_pubsub";
@@ -392,6 +424,7 @@ unittest {
 }
 
 
+/// unittest - req/rep
 @("req/rep")
 unittest {
     import std.concurrency: spawnLinked, send;
@@ -407,6 +440,7 @@ unittest {
     tid.send(Stop());
 }
 
+/// unittest - responder
 version(unittest) {
     import std.concurrency: Tid;
 
@@ -433,6 +467,7 @@ version(unittest) {
     }
 }
 
+/// unittest - tcp/ip push pull
 @("push/pull over TCP")
 unittest {
     import core.thread: Thread, msecs;
@@ -452,7 +487,8 @@ unittest {
 }
 
 
-@HiddenTest // it's here to show that this can fail, but it doesn't always
+/// unittest - IPC push pull
+@HiddenTest /// it's here to show that this can fail, but it doesn't always
 @("push/pull over IPC")
 unittest {
     auto pull = NanoSocket(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_push_pull_test"));
