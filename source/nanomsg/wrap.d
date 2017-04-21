@@ -392,7 +392,7 @@ enum isNanoSocket(T) = is(typeof(checkNanoSocket!T));
 static assert(isNanoSocket!NanoSocket);
 
 
-/// unittest - set/get option
+///
 @("set/get option")
 unittest {
     auto sock = NanoSocket(NanoSocket.Protocol.subscribe);
@@ -401,7 +401,7 @@ unittest {
     sock.getOption!int(NanoSocket.Option.sendTimeoutMs).shouldEqual(42);
 }
 
-/// unittest - pub/sub
+///
 @("pub/sub")
 unittest {
     const uri = "inproc://test_pubsub";
@@ -424,7 +424,7 @@ unittest {
 }
 
 
-/// unittest - req/rep
+///
 @("req/rep")
 unittest {
     import std.concurrency: spawnLinked, send;
@@ -440,7 +440,7 @@ unittest {
     tid.send(Stop());
 }
 
-/// unittest - responder
+///
 version(unittest) {
     import std.concurrency: Tid;
 
@@ -467,7 +467,7 @@ version(unittest) {
     }
 }
 
-/// unittest - tcp/ip push pull
+///
 @("push/pull over TCP")
 unittest {
     import core.thread: Thread, msecs;
@@ -487,7 +487,7 @@ unittest {
 }
 
 
-/// unittest - IPC push pull
+///
 @HiddenTest /// it's here to show that this can fail, but it doesn't always
 @("push/pull over IPC")
 unittest {
