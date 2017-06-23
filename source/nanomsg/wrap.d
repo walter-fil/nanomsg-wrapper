@@ -1,7 +1,7 @@
 /**
     nanomsg is a socket library that provides several common communication patterns. It aims to make the networking layer fast, scalable, and easy to use.
     Implemented in C, it works on a wide range of operating systems with no further dependencies.
-    
+
     This module implements a convenience wrapper API for nanomsg
 
     Authors: Laeeth Isharc and Atila Neves (Kaleidic Associates Advisory Limited)
@@ -43,6 +43,7 @@ struct NanoSocket {
 
     import std.traits: isArray;
     import std.typecons: Flag;
+    import std.datetime: Duration;
 
     /// nanomsg protocol
     enum Protocol {
@@ -143,12 +144,12 @@ struct NanoSocket {
     }
 
     /// destructor
-    ~this() @safe {
+    ~this() @safe nothrow {
         close;
     }
 
     /// close socket
-    void close() @trusted {
+    void close() @trusted nothrow {
         if(_nanoSock != INVALID_FD) {
             _nanoSock.nn_close;
         }
