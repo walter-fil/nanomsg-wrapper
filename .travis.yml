@@ -13,6 +13,11 @@ install:
   - sudo ldconfig
   - popd
 
+script:
+  - dub test
+  - dub build
+  - make -C examples
+
 matrix:
     include:
         - d: dmd
