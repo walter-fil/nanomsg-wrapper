@@ -1,8 +1,12 @@
 experiment/*
-dmd.conf
-libnanomsg*
-*.so.0
-*.so
-*.o
+*.a
 .dub
 bin
+examples/bus
+examples/filesend
+examples/pair
+examples/pipeline
+examples/pubsub
+examples/reqrep
+examples/survey
+examples/*.o
