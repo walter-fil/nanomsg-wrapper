@@ -31,7 +31,16 @@ struct ConnectTo {
 
 /// wrapper for a string uri to bind to
 struct BindTo {
-    string uri;
+
+    this(string uri) {
+        this([uri]);
+    }
+
+    this(string[] uris) {
+        this.uris = uris;
+    }
+
+    string[] uris;
 }
 
 /**
@@ -127,7 +136,9 @@ struct NanoSocket {
 
         // this is so it's easy to specify the same string
         // for both ends of the socket
-        bind(bindTo.uri.replace("localhost", "*"));
+        foreach(uri; bindTo.uris) {
+            bind(uri.replace("localhost", "*"));
+        }
     }
 
     /// constructor
@@ -187,17 +198,21 @@ struct NanoSocket {
        Sends the bytes as expected. If the protocol is Request, then returns
        the response, otherwise returns an empty array.
      */
-    ubyte[] send(T)(T[] data, Flag!"blocking" blocking = Yes.blocking) const {
-        import std.exception: enforce;
+    ubyte[] send(T)(T[] data,
+                    Flag!"blocking" blocking = Yes.blocking,
+                    in string file = __FILE__,
+                    in size_t line = __LINE__)
+        const
+    {
         import std.conv: text;
 
         const sent = nn_send(_nanoSock, data.ptr, data.length, flags(blocking));
-        if(blocking)
-            enforce(sent == data.length,
-                    text("Expected to send ", data.length, " bytes but sent ", sent));
+        if(blocking) {
+            if(sent != data.length)
+                throw new Exception(text("Expected to send ", data.length, " bytes but sent ", sent), file, line);
+        }
 
         return _protocol == Protocol.request ? receive(blocking) : [];
-
     }
 
     /**
@@ -522,4 +537,24 @@ unittest {
 
     foreach(i; 0 .. numTimes)
         pull.receive(No.blocking).shouldEqual("foo");
+}
+
+
+@("bind to several addresses at once")
+unittest {
+    auto pull = NanoSocket(NanoSocket.Protocol.pull, BindTo(["ipc://nanomsg_ipc_push_pull_1",
+                                                             "ipc://nanomsg_ipc_push_pull_2"]));
+    pull.setOption(NanoSocket.Option.receiveTimeoutMs, 10);
+
+    auto push1 = NanoSocket(NanoSocket.Protocol.push, ConnectTo("ipc://nanomsg_ipc_push_pull_1"));
+    auto push2 = NanoSocket(NanoSocket.Protocol.push, ConnectTo("ipc://nanomsg_ipc_push_pull_2"));
+
+    push1.setOption(NanoSocket.Option.sendTimeoutMs, 10);
+    push2.setOption(NanoSocket.Option.sendTimeoutMs, 10);
+
+    push1.send("foo");
+    push2.send("bar");
+
+    pull.receive.shouldEqual("foo");
+    pull.receive.shouldEqual("bar");
 }
