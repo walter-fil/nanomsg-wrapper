@@ -1,21 +1,25 @@
-set -e -o pipefail
-kal_project_dir=`pwd`
-source_dir=${kal_project_dir}/source/nanomsg
-echo generating documents for ${kal_project_dir}
+#!/bin/bash
+
+set -euo pipefail
+
+SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+PROJECT_DIR=$SCRIPT_DIR
+SOURCE_DIR=${PROJECT_DIR}/source/nanomsg
+echo generating documents for "${PROJECT_DIR}"
 mkdir -p docs
-cd ~
-mkdir -p tmp
+[ -e tmp ] && rm -r tmp
+mkdir tmp
 cd tmp
-rm -rf adrdox
 git clone https://github.com/adamdruppe/adrdox
-cp ${kal_project_dir}/.skeleton.html adrdox/skeleton.html
-mkdir -p ${kal_project_dir}/docs/examples
+cp "${PROJECT_DIR}"/.skeleton.html adrdox/skeleton.html
+mkdir -p "${PROJECT_DIR}"/docs/examples
 cd adrdox
 make
-./doc2 -i ${source_dir}
-mv generated-docs/* ${kal_project_dir}/docs
-./doc2 -i ${kal_project_dir}/examples
-mv generated-docs/* ${kal_project_dir}/docs/examples
-cp ${kal_project_dir}/docs/nanomsg.html ${kal_project_dir}/docs/index.html
-cd ${kal_project_dir}
+./doc2 -i "${SOURCE_DIR}"
+mv generated-docs/* "${PROJECT_DIR}"/docs
+./doc2 -i "${PROJECT_DIR}"/examples
+mv generated-docs/* "${PROJECT_DIR}"/docs/examples
+cp "${PROJECT_DIR}"/docs/nanomsg.html "${PROJECT_DIR}"/docs/index.html
+cd "${PROJECT_DIR}"
+rm -r tmp
 echo succeeded - docs generated
