@@ -32,11 +32,11 @@ struct ConnectTo {
 /// wrapper for a string uri to bind to
 struct BindTo {
 
-    this(string uri) {
+    this(inout(string) uri) inout @safe pure {
         this([uri]);
     }
 
-    this(string[] uris) {
+    this(inout(string)[] uris) inout @safe pure {
         this.uris = uris;
     }
 
