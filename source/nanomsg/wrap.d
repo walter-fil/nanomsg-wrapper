@@ -109,17 +109,17 @@ struct NanoSocket {
 
     /// constructor
     this(in Protocol protocol, in int domain = AF_SP) @safe {
-        init(protocol, domain);
+        initialize(protocol, domain);
     }
 
     /// constructor
     this(in Protocol protocol, in BindTo bindTo, int domain = AF_SP) @safe {
-        init(protocol, bindTo, domain);
+        initialize(protocol, bindTo, domain);
     }
 
     /// constructor
     this(in Protocol protocol, in ConnectTo connectTo, int domain = AF_SP) @safe {
-        init(protocol, connectTo, domain);
+        initialize(protocol, connectTo, domain);
     }
 
     /// destructor
@@ -128,7 +128,7 @@ struct NanoSocket {
     }
 
     /// Same as the revelant constructor, can be used on exisiting objects
-    void init(in Protocol protocol, in int domain = AF_SP) @trusted {
+    void initialize(in Protocol protocol, in int domain = AF_SP) @trusted {
         int protocolToInt(Protocol protocol) {
             final switch(protocol) with(Protocol) {
                 case request:
@@ -161,10 +161,10 @@ struct NanoSocket {
     }
 
     /// Same as the revelant constructor, can be used on exisiting objects
-    void init(in Protocol protocol, in BindTo bindTo, int domain = AF_SP) @trusted {
+    void initialize(in Protocol protocol, in BindTo bindTo, int domain = AF_SP) @trusted {
         import std.string: replace;
 
-        init(protocol, domain);
+        initialize(protocol, domain);
 
         // this is so it's easy to specify the same string
         // for both ends of the socket
@@ -174,8 +174,8 @@ struct NanoSocket {
     }
 
     /// Same as the revelant constructor, can be used on exisiting objects
-    void init(in Protocol protocol, in ConnectTo connectTo, int domain = AF_SP) @trusted {
-        init(protocol, domain);
+    void initialize(in Protocol protocol, in ConnectTo connectTo, int domain = AF_SP) @trusted {
+        initialize(protocol, domain);
         connect(connectTo.uri);
 
         version(Windows) {
@@ -617,8 +617,8 @@ unittest {
     NanoSocket pull;
     NanoSocket push;
 
-    pull.init(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_init_after"));
-    push.init(NanoSocket.Protocol.push, ConnectTo("ipc://nanomsg_ipc_init_after"));
+    pull.initialize(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_init_after"));
+    push.initialize(NanoSocket.Protocol.push, ConnectTo("ipc://nanomsg_ipc_init_after"));
 
     pull.setOption(NanoSocket.Option.receiveTimeoutMs, 10);
     push.setOption(NanoSocket.Option.sendTimeoutMs, 10);
@@ -633,6 +633,6 @@ unittest {
 @("Can init twice")
 unittest {
     NanoSocket pull;
-    pull.init(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_init_twice"));
-    pull.init(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_init_twice"));
+    pull.initialize(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_init_twice"));
+    pull.initialize(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_init_twice"));
 }
