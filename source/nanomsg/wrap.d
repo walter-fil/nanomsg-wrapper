@@ -43,6 +43,18 @@ struct BindTo {
     string[] uris;
 }
 
+struct TotalDuration {
+    import std.datetime: Duration;
+    Duration value;
+    alias value this;
+}
+
+struct RetryDuration {
+    import std.datetime: Duration;
+    Duration value;
+    alias value this;
+}
+
 /**
 
     NanoSocket - high level wrapper for a nanomsg socket
@@ -236,7 +248,23 @@ struct NanoSocket {
      This only matters when the protocol is request/response
      Returns the response if in request mode, otherwise an empty byte slice.
      */
-    ubyte[] trySend(T)(T[] data, Duration duration, Flag!"blocking" recvBlocking = Yes.blocking) {
+    ubyte[] trySend(T)(T[] data, Duration totalDuration, Flag!"blocking" recvBlocking = Yes.blocking) {
+        import std.datetime: msecs;
+        return trySend(data, TotalDuration(totalDuration), RetryDuration(10.msecs), recvBlocking);
+    }
+
+    /**
+     Tries to send bytes to the other side.
+     duration is how long to try for
+     recvBlocking controls whether or not to block on reception of a response.
+     This only matters when the protocol is request/response
+     Returns the response if in request mode, otherwise an empty byte slice.
+     */
+    ubyte[] trySend(T)(T[] data,
+                       TotalDuration totalDuration,
+                       RetryDuration retryDuration,
+                       Flag!"blocking" recvBlocking = Yes.blocking)
+    {
         import std.exception: enforce;
         import std.datetime: StopWatch, AutoStart, msecs;
         import std.conv: text;
@@ -246,13 +274,23 @@ struct NanoSocket {
         auto sw = StopWatch(AutoStart.yes);
         do {
             sent = nn_send(_nanoSock, &data[0], data.length, flags(No.blocking));
-            if(sent != data.length) Thread.sleep(10.msecs); // play nice with other threads and the CPU
-        } while(sent != data.length && cast(Duration)sw.peek < duration);
+            if(sent != data.length) Thread.sleep(retryDuration); // play nice with other threads and the CPU
+        } while(sent != data.length && cast(Duration)sw.peek < totalDuration);
 
         enforce(sent == data.length,
                 text("Expected to send ", data.length, " bytes but sent ", sent));
 
         return _protocol == Protocol.request ? receive(recvBlocking) : [];
+    }
+
+    @("trySend")
+    unittest {
+        import std.datetime: seconds, msecs;
+
+        enum uri = "ipc://try_send_test";
+        auto pull = NanoSocket(Protocol.pull, BindTo(uri));
+        auto push = NanoSocket(Protocol.push, ConnectTo(uri));
+        push.trySend("foo", TotalDuration(1.seconds), RetryDuration(10.msecs));
     }
 
     /// connect
