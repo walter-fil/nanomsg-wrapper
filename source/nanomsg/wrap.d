@@ -245,7 +245,7 @@ struct NanoSocket {
         int sent;
         auto sw = StopWatch(AutoStart.yes);
         do {
-            sent = nn_send(_nanoSock, data.ptr, data.length, flags(No.blocking));
+            sent = nn_send(_nanoSock, &data[0], data.length, flags(No.blocking));
             if(sent != data.length) Thread.sleep(10.msecs); // play nice with other threads and the CPU
         } while(sent != data.length && cast(Duration)sw.peek < duration);
 
@@ -444,7 +444,7 @@ unittest {
 @("pub/sub")
 unittest {
     const uri = "inproc://test_pubsub";
-    auto pub = NanoSocket(NanoSocket.Protocol.publish, BindTo(uri));
+    auto pub = NanoSocket(NanoSocket.Protocol.publish, const BindTo(uri));
     auto sub = NanoSocket(NanoSocket.Protocol.subscribe, ConnectTo(uri));
     sub.setOption(NanoSocket.Option.subscribeTopic, "foo");
 
@@ -496,7 +496,7 @@ version(unittest) {
         import std.concurrency: receiveTimeout;
         import std.datetime: msecs;
 
-        const socket = NanoSocket(NanoSocket.Protocol.response, BindTo(uri));
+        const socket = NanoSocket(NanoSocket.Protocol.response, const BindTo(uri));
         socket.setOption(NanoSocket.Option.receiveTimeoutMs, timeoutMs);
 
         for(bool done; !done;) {
