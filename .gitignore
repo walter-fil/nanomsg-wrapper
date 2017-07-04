@@ -11,3 +11,4 @@ examples/reqrep
 examples/survey
 examples/*.o
 *.lib
+*.dll
