@@ -238,7 +238,10 @@ struct NanoSocket {
                 throw new Exception(text("Expected to send ", data.length, " bytes but sent ", sent), file, line);
         }
 
-        return _protocol == Protocol.request ? receive(blocking) : [];
+        ubyte[] empty;
+        return () @trusted { return _protocol == Protocol.request
+                ? receive(blocking)
+                : (sent == data.length ? cast(ubyte[])data : empty); }();
     }
 
     /**
@@ -463,6 +466,7 @@ void checkNanoSocket(T)() {
 }
 enum isNanoSocket(T) = is(typeof(checkNanoSocket!T));
 static assert(isNanoSocket!NanoSocket);
+
 
 /**
         Examples:
