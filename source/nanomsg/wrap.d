@@ -206,7 +206,10 @@ struct NanoSocket {
     }
 
     /// receive
-    ubyte[] receive(int BUF_SIZE = 1024)(Flag!"blocking" blocking = Yes.blocking) const {
+    ubyte[] receive(int BUF_SIZE = 1024)
+                   (Flag!"blocking" blocking = Yes.blocking, in string file = __FILE__, in size_t line = __LINE__)
+        const
+    {
         import std.exception: enforce;
         import std.conv: text;
         import core.stdc.errno: EAGAIN, EINTR;
@@ -215,7 +218,7 @@ struct NanoSocket {
         const flags = blocking ? 0 : NN_DONTWAIT;
         const numBytes = nn_recv(_nanoSock, buf.ptr, buf.length, flags);
 
-        if(blocking) enforceNanoMsgRet(numBytes);
+        if(blocking) enforceNanoMsgRet(numBytes, file, line);
 
         return numBytes >= 0 ? buf[0 .. numBytes].dup : [];
     }
