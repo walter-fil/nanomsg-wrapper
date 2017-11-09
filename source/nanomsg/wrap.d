@@ -212,10 +212,6 @@ struct NanoSocket {
                     in size_t line = __LINE__)
         const
     {
-        import std.exception: enforce;
-        import std.conv: text;
-        import core.stdc.errno: EAGAIN, EINTR;
-
         ubyte[BUF_SIZE] buf;
         const flags = blocking ? 0 : NN_DONTWAIT;
         const numBytes = () @trusted { return nn_recv(_nanoSock, buf.ptr, buf.length, flags); }();
@@ -238,12 +234,7 @@ struct NanoSocket {
         import std.conv: text;
 
         const sent = () @trusted { return nn_send(_nanoSock, data.ptr, data.length, flags(blocking)); }();
-        if(blocking) {
-            if(sent != data.length)
-                throw new Exception(text("Expected to send ", data.length, " bytes but sent ", sent),
-                                    file,
-                                    line);
-        }
+        if(blocking) enforceNanoMsgRet(sent, file, line);
 
         ubyte[] empty;
         return () @trusted { return _protocol == Protocol.request
