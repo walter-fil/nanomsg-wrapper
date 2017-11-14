@@ -215,8 +215,7 @@ struct NanoSocket {
         ubyte[BUF_SIZE] buf;
         const flags = blocking ? 0 : NN_DONTWAIT;
         const numBytes = () @trusted { return nn_recv(_nanoSock, buf.ptr, buf.length, flags); }();
-
-        if(blocking) enforceNanoMsgRet(numBytes, file, line);
+        enforceNanoMsgRet(numBytes, file, line);
 
         return numBytes >= 0 ? buf[0 .. numBytes].dup : [];
     }
@@ -234,7 +233,7 @@ struct NanoSocket {
         import std.conv: text;
 
         const sent = () @trusted { return nn_send(_nanoSock, data.ptr, data.length, flags(blocking)); }();
-        if(blocking) enforceNanoMsgRet(sent, file, line);
+        enforceNanoMsgRet(sent, file, line);
 
         ubyte[] empty;
         return () @trusted { return _protocol == Protocol.request
