@@ -212,7 +212,6 @@ struct NanoSocket {
                     in size_t line = __LINE__)
         const @safe
     {
-        import std.algorithm: min;
         static import core.stdc.errno;
 
         ubyte* buf = null;
