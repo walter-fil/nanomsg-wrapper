@@ -12,3 +12,8 @@ examples/survey
 examples/*.o
 *.lib
 *.dll
+*.ninja
+compile_commands.json
+.ninja_*
+.reggae
+ut
