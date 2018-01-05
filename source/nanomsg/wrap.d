@@ -266,7 +266,11 @@ struct NanoSocket {
                        Flag!"blocking" recvBlocking = Yes.blocking)
     {
         import std.exception: enforce;
-        import std.datetime: StopWatch, AutoStart, msecs;
+        static if(__VERSION__ >= 2077)
+            import std.datetime.stopwatch: StopWatch, AutoStart;
+        else
+            import std.datetime: StopWatch, AutoStart;
+        import std.datetime: msecs;
         import std.conv: text;
         import core.thread: Thread;
 
