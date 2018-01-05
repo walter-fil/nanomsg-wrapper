@@ -474,7 +474,7 @@ void checkNanoSocket(T)() {
     s.send(msg);
 }
 enum isNanoSocket(T) = is(typeof(checkNanoSocket!T));
-//static assert(isNanoSocket!NanoSocket);
+static assert(isNanoSocket!NanoSocket);
 
 
 /**
