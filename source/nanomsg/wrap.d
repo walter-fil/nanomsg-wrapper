@@ -212,10 +212,12 @@ struct NanoSocket {
                     in size_t line = __LINE__)
         const
     {
+        static import core.stdc.errno;
         ubyte[BUF_SIZE] buf;
         const flags = blocking ? 0 : NN_DONTWAIT;
         const numBytes = () @trusted { return nn_recv(_nanoSock, buf.ptr, buf.length, flags); }();
-        enforceNanoMsgRet(numBytes, file, line);
+        if(blocking || (numBytes < 0 && () @trusted { return nn_errno; }() != core.stdc.errno.EAGAIN))
+            enforceNanoMsgRet(numBytes, file, line);
 
         return numBytes >= 0 ? buf[0 .. numBytes].dup : [];
     }
