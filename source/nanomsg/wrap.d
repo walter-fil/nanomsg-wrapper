@@ -55,6 +55,7 @@ struct RetryDuration {
     alias value this;
 }
 
+
 /**
 
     NanoSocket - high level wrapper for a nanomsg socket
@@ -206,20 +207,26 @@ struct NanoSocket {
     }
 
     /// receive
-    ubyte[] receive(int BUF_SIZE = 1024)
-                   (Flag!"blocking" blocking = Yes.blocking,
+    ubyte[] receive(Flag!"blocking" blocking = Yes.blocking,
                     in string file = __FILE__,
                     in size_t line = __LINE__)
-        const
+        const @safe
     {
+        import std.algorithm: min;
         static import core.stdc.errno;
-        ubyte[BUF_SIZE] buf;
+
+        ubyte* buf = null;
         const flags = blocking ? 0 : NN_DONTWAIT;
-        const numBytes = () @trusted { return nn_recv(_nanoSock, buf.ptr, buf.length, flags); }();
+        const numBytes = () @trusted { return nn_recv(_nanoSock, &buf, NN_MSG, flags); }();
+
+        scope(exit) () @trusted { if(numBytes > 0) nn_freemsg(buf); }();
+
         if(blocking || (numBytes < 0 && () @trusted { return nn_errno; }() != core.stdc.errno.EAGAIN))
             enforceNanoMsgRet(numBytes, file, line);
 
-        return numBytes >= 0 ? buf[0 .. numBytes].dup : [];
+        return numBytes >= 0
+            ? () @trusted { return buf[0 .. numBytes].dup; }()
+            : [];
     }
 
     /**
@@ -470,11 +477,12 @@ void checkNanoSocket(T)() {
     s.send("foobar");
     s.setOption(NanoSocket.Option.subscribeTopic, "topic");
     s.setOption(NanoSocket.Option.receiveTimeoutMs, 100);
-    ubyte[] msg = s.receive(Yes.blocking);
+    auto msg = s.receive(Yes.blocking);
+    ubyte[] bytes = msg;
     s.send(msg);
 }
 enum isNanoSocket(T) = is(typeof(checkNanoSocket!T));
-static assert(isNanoSocket!NanoSocket);
+//static assert(isNanoSocket!NanoSocket);
 
 
 /**
@@ -659,4 +667,23 @@ else {
     auto pull = NanoSocket(NanoSocket.Protocol.pull, BindTo(uri));
     NanoSocket push;
     push.send("foo").shouldThrow;
+}
+
+@("receive big buffer")
+@safe unittest {
+
+    import std.range: repeat, take;
+    NanoSocket pull, push;
+
+    enum uri = "inproc://nanomsg_big_receive";
+    pull.initialize(NanoSocket.Protocol.pull, BindTo(uri));
+    push.initialize(NanoSocket.Protocol.push, ConnectTo(uri));
+
+    pull.setOption(NanoSocket.Option.receiveTimeoutMs, 10);
+    push.setOption(NanoSocket.Option.sendTimeoutMs, 10);
+
+
+    enum numBytes = 32_000;
+    push.send(new ubyte[32_000]);
+    pull.receive.shouldEqual(0.repeat.take(numBytes));
 }
