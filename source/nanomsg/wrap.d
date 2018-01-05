@@ -212,21 +212,45 @@ struct NanoSocket {
                     in size_t line = __LINE__)
         const @safe
     {
+        return receive([], blocking, file, line);
+    }
+
+    /**
+       A version of `receive` that takes a user supplied buffer to fill
+     */
+    ubyte[] receive(ubyte[] buffer,
+                    Flag!"blocking" blocking = Yes.blocking,
+                    in string file = __FILE__,
+                    in size_t line = __LINE__)
+        const @safe
+    {
+        import std.algorithm: min;
         static import core.stdc.errno;
 
-        ubyte* buf = null;
+        ubyte* nanomsgBuffer = null;
         const flags = blocking ? 0 : NN_DONTWAIT;
-        const numBytes = () @trusted { return nn_recv(_nanoSock, &buf, NN_MSG, flags); }();
+        const haveBuffer = () @trusted { return buffer.ptr !is null; }();
+        auto recvPointer = () @trusted {
+            return haveBuffer ? cast(void*)&buffer[0] : cast(void*)&nanomsgBuffer;
+        }();
+        const length = haveBuffer ? buffer.length : NN_MSG;
+        const numBytes = () @trusted { return nn_recv(_nanoSock, recvPointer, length, flags); }();
+        auto pointer = haveBuffer ? &buffer[0] : nanomsgBuffer;
 
-        scope(exit) () @trusted { if(numBytes > 0) nn_freemsg(buf); }();
+        scope(exit) () @trusted {
+            if(numBytes > 0 && buffer.ptr is null) nn_freemsg(nanomsgBuffer);
+        }();
 
         if(blocking || (numBytes < 0 && () @trusted { return nn_errno; }() != core.stdc.errno.EAGAIN))
             enforceNanoMsgRet(numBytes, file, line);
 
+        const retSliceLength = haveBuffer ? min(numBytes, buffer.length) : numBytes;
+
         return numBytes >= 0
-            ? () @trusted { return buf[0 .. numBytes].dup; }()
+            ? () @trusted { return pointer[0 .. retSliceLength].dup; }()
             : [];
     }
+
 
     /**
        Sends the bytes as expected. If the protocol is Request, then returns
@@ -685,4 +709,12 @@ else {
     enum numBytes = 32_000;
     push.send(new ubyte[32_000]);
     pull.receive.shouldEqual(0.repeat.take(numBytes));
+}
+
+@("receive with user-supplied buffer")
+@safe unittest {
+    NanoSocket pull;
+    pull.initialize(NanoSocket.Protocol.pull, BindTo("inproc://nanomsg_receive_buffer"));
+    ubyte[1024] buf;
+    pull.receive(buf, No.blocking).shouldBeEmpty;
 }
