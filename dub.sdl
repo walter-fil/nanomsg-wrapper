@@ -19,4 +19,5 @@ configuration "unittest" {
     dependency "unit-threaded" version="~>0.7.0"
     preBuildCommands "dub run unit-threaded -c gen_ut_main -- -f bin/ut.d"
     mainSourceFile "bin/ut.d"
+    versions "Test_nanomsg_wrapper"
 }
