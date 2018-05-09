@@ -18,7 +18,7 @@ module nanomsg.wrap;
 import nanomsg.bindings;
 public import std.typecons: Yes, No; // to facilitate using send, receive
 
-version(unittest)
+version(Test_nanomsg_wrapper)
     import unit_threaded;
 else
     enum HiddenTest;
