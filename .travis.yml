@@ -3,9 +3,7 @@ sudo: required
 
 apt_packages:
   - cmake
-
-install:
-  - build/install_nanomsg.sh
+  - libnanomsg-dev
 
 script:
   - dub test
