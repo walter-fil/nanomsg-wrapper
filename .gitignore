@@ -16,4 +16,4 @@ examples/*.o
 compile_commands.json
 .ninja_*
 .reggae
-ut
+bin
