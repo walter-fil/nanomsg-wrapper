@@ -5,13 +5,7 @@ apt_packages:
   - cmake
 
 install:
-  - git clone https://github.com/nanomsg/nanomsg.git
-  - pushd nanomsg
-  - cmake .
-  - make -j`nproc`
-  - sudo make install
-  - sudo ldconfig
-  - popd
+  - build/install_nanomsg.sh
 
 script:
   - dub test
