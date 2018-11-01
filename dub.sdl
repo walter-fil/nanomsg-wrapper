@@ -15,9 +15,11 @@ configuration "library" {
 
 configuration "unittest" {
     targetType "executable"
-    targetName "bin/ut"
-    dependency "unit-threaded" version="~>0.7.0"
-    preBuildCommands "dub run unit-threaded -c gen_ut_main -- -f bin/ut.d"
-    mainSourceFile "bin/ut.d"
-    versions "Test_nanomsg_wrapper"
+    targetPath "bin"
+    targetName "ut"
+    dependency "unit-threaded" version="*"
+    sourcePaths "tests"
+    mainSourceFile "tests/test_main.d"
+    # nanomsg has problems with threads
+    versions "unitUnthreaded"
 }

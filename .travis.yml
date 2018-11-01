@@ -14,7 +14,7 @@ install:
   - popd
 
 script:
-  - dub test -- -s  # nanomsg has problems with threads
+  - dub test
   - dub build
   - make -C examples
 
