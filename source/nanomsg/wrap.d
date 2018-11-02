@@ -27,12 +27,12 @@ struct ConnectTo {
 /// wrapper for a string uri to bind to
 struct BindTo {
 
-    this(inout(string) uri) inout @safe pure {
+    this(in string uri) @safe pure {
         this([uri]);
     }
 
-    this(inout(string)[] uris) inout @safe pure {
-        this.uris = uris;
+    this(in string[] uris) @safe pure {
+        this.uris = uris.dup;
     }
 
     string[] uris;
