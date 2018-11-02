@@ -223,9 +223,10 @@ struct NanoSocket {
         static import core.stdc.errno;
 
         void* nanomsgBuffer = null;
+        // can't use &buffer[0] here since it might be empty
         const haveBuffer = () @trusted { return buffer.ptr !is null; }();
         auto recvPointer = () @trusted {
-            return haveBuffer ? cast(void*)&buffer[0] : cast(void*)&nanomsgBuffer;
+            return haveBuffer ? &buffer[0] : cast(void*) &nanomsgBuffer;
         }();
         const length = haveBuffer ? buffer.length : NN_MSG;
         const numBytes = () @trusted { return nn_recv(_nanoSock, recvPointer, length, flags(blocking)); }();
@@ -284,7 +285,7 @@ struct NanoSocket {
         void[] empty;
         return () @trusted { return _protocol == Protocol.request
                 ? receive(blocking)
-                : (sent == data.length ? cast(void[])data : empty); }();
+                : (sent == data.length ? cast(void[]) data : empty); }();
     }
 
     /**
@@ -325,7 +326,7 @@ struct NanoSocket {
         do {
             sent = () @trusted { return nn_send(_nanoSock, &data[0], data.length, flags(No.blocking)); }();
             if(sent != data.length) () @trusted { Thread.sleep(retryDuration); }();
-        } while(sent != data.length && cast(Duration)sw.peek < totalDuration);
+        } while(sent != data.length && cast(Duration) sw.peek < totalDuration);
 
         enforce(sent == data.length,
                 text("Expected to send ", data.length, " bytes but sent ", sent));
@@ -474,7 +475,7 @@ private:
         U val;
         ulong length = val.length;
         const ret = () @trusted {
-            return nn_getsockopt(_nanoSock, level, option, cast(void*)val.ptr, &length);
+            return nn_getsockopt(_nanoSock, level, option, cast(void*) val.ptr, &length);
         }();
         enforceNanoMsgRet(ret);
         return val[0 .. length].to!T;
@@ -486,7 +487,7 @@ private:
 
         T val;
         size_t length = T.sizeof;
-        const ret = () @trusted { return nn_getsockopt(_nanoSock, level, option, cast(void*)&val, &length); }();
+        const ret = () @trusted { return nn_getsockopt(_nanoSock, level, option, cast(void*) &val, &length); }();
         enforceNanoMsgRet(ret);
         enforce(length == T.sizeof,
                 text("getsockopt returned ", length, " but sizeof(", T.stringof, ") is ", T.sizeof));
