@@ -3,13 +3,13 @@
 
     nanomsg is a socket library that provides several common communication patterns. It aims to make the networking layer fast, scalable, and easy to use.
     Implemented in C, it works on a wide range of operating systems with no further dependencies.
-    
+
     This module implements D bindings for nanomsg.
 
     Authors: Laeeth Isharc and Atila Neves (Kaleidic Associates Advisory Limited)
     Date: April 20, 2017
     Written: 2014,2015,2016,2017
-    
+
     Caveat emptor.
     Copyright:
         https://github.com/nanomsg/nanomsg/blob/master/COPYING
@@ -17,6 +17,9 @@
  */
 module nanomsg.bindings;
 
+
+@nogc:
+nothrow:
 
 // Note that comments beginning /** followed by a new line are highlighted in sublime, so please keep this formatting */
 
@@ -375,7 +378,7 @@ ubyte* NN_CMSG_DATA(T)(T* cmsg)
 /// Extension to POSIX defined by RFC 3542.
 pragma(inline)
 auto NN_CMSG_SPACE(size_t len)
-{   
+{
     return (NN_CMSG_ALIGN_ (len) + NN_CMSG_ALIGN_ (nn_cmsghdr.sizeof));
 }
 
