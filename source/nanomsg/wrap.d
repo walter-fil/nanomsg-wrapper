@@ -202,7 +202,7 @@ struct NanoSocket {
     }
 
     /// receive
-    ubyte[] receive(Flag!"blocking" blocking = Yes.blocking,
+    void[] receive(Flag!"blocking" blocking = Yes.blocking,
                     in string file = __FILE__,
                     in size_t line = __LINE__)
         const @safe
@@ -213,7 +213,7 @@ struct NanoSocket {
     /**
        A version of `receive` that takes a user supplied buffer to fill
      */
-    ubyte[] receive(ubyte[] buffer,
+    void[] receive(void[] buffer,
                     Flag!"blocking" blocking = Yes.blocking,
                     in string file = __FILE__,
                     in size_t line = __LINE__)
@@ -222,7 +222,7 @@ struct NanoSocket {
         import std.algorithm: min;
         static import core.stdc.errno;
 
-        ubyte* nanomsgBuffer = null;
+        void* nanomsgBuffer = null;
         const haveBuffer = () @trusted { return buffer.ptr !is null; }();
         auto recvPointer = () @trusted {
             return haveBuffer ? cast(void*)&buffer[0] : cast(void*)&nanomsgBuffer;
@@ -270,7 +270,7 @@ struct NanoSocket {
        Sends the bytes as expected. If the protocol is Request, then returns
        the response, otherwise returns an empty array.
      */
-    ubyte[] send(T)(T[] data,
+    void[] send(T)(T[] data,
                     Flag!"blocking" blocking = Yes.blocking,
                     in string file = __FILE__,
                     in size_t line = __LINE__)
@@ -281,10 +281,10 @@ struct NanoSocket {
         const sent = () @trusted { return nn_send(_nanoSock, data.ptr, data.length, flags(blocking)); }();
         enforceNanoMsgRet(sent, file, line);
 
-        ubyte[] empty;
+        void[] empty;
         return () @trusted { return _protocol == Protocol.request
                 ? receive(blocking)
-                : (sent == data.length ? cast(ubyte[])data : empty); }();
+                : (sent == data.length ? cast(void[])data : empty); }();
     }
 
     /**
@@ -294,7 +294,7 @@ struct NanoSocket {
      This only matters when the protocol is request/response
      Returns the response if in request mode, otherwise an empty byte slice.
      */
-    ubyte[] trySend(T)(T[] data, Duration totalDuration, Flag!"blocking" recvBlocking = Yes.blocking) {
+    void[] trySend(T)(T[] data, Duration totalDuration, Flag!"blocking" recvBlocking = Yes.blocking) {
         import std.datetime: msecs;
         return trySend(data, TotalDuration(totalDuration), RetryDuration(10.msecs), recvBlocking);
     }
@@ -306,7 +306,7 @@ struct NanoSocket {
      This only matters when the protocol is request/response
      Returns the response if in request mode, otherwise an empty byte slice.
      */
-    ubyte[] trySend(T)(T[] data,
+    void[] trySend(T)(T[] data,
                        TotalDuration totalDuration,
                        RetryDuration retryDuration,
                        Flag!"blocking" recvBlocking = Yes.blocking)
@@ -505,7 +505,7 @@ void checkNanoSocket(T)() {
     s.setOption(NanoSocket.Option.subscribeTopic, "topic");
     s.setOption(NanoSocket.Option.receiveTimeoutMs, 100);
     auto msg = s.receive(Yes.blocking);
-    ubyte[] bytes = msg;
+    void[] bytes = msg;
     s.send(msg);
 }
 

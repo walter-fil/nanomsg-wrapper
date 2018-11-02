@@ -41,12 +41,12 @@ import unit_threaded;
 
     // but not messages that don't
     pub.send("bar/oops");
-    sub.receive(No.blocking).shouldBeEmpty;
+    sub.receive(No.blocking).length.should == 0;
 
     // after unsubscribing, messages are no longer received
     sub.setOption(NanoSocket.Option.unsubscribeTopic, "foo");
     pub.send("foo/hello");
-    sub.receive(No.blocking).shouldBeEmpty;
+    sub.receive(No.blocking).length.should == 0;
 }
 
 
@@ -210,7 +210,8 @@ else {
 
     enum numBytes = 32_000;
     push.send(new ubyte[numBytes]);
-    pull.receive.shouldEqual(0.repeat.take(numBytes));
+    const bytes = () @trusted { return cast(const(ubyte)[]) pull.receive; }();
+    bytes.shouldEqual(0.repeat.take(numBytes));
 
 }
 
@@ -220,7 +221,7 @@ else {
     NanoSocket pull;
     pull.initialize(NanoSocket.Protocol.pull, BindTo("inproc://nanomsg_receive_buffer"));
     ubyte[1024] buf;
-    pull.receive(buf, No.blocking).shouldBeEmpty;
+    pull.receive(buf, No.blocking).length.should == 0;
 }
 
 @("receive.@nogc")
