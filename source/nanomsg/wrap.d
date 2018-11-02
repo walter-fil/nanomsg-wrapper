@@ -251,15 +251,16 @@ struct NanoSocket {
                            in size_t line = __LINE__)
         @trusted @nogc const
     {
-        import nogc: enforce;
+        import nogc: NoGcException;
         static import core.stdc.errno;
 
         void* buffer;
         const numBytes = nn_recv(_nanoSock, &buffer, NN_MSG, flags(blocking));
 
         if(blocking || (numBytes < 0 && nn_errno != core.stdc.errno.EAGAIN)) {
-            enforce(numBytes >= 0,
-                    "nanomsg expression failed with value ", numBytes,
+            if(numBytes < 0)
+                NoGcException.throwNewWithFileAndLine(
+                    file, line, "nanomsg expression failed with value ", numBytes,
                     " errno ", nn_errno, ", error: ", nn_strerror(nn_errno));
         }
 
