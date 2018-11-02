@@ -249,7 +249,7 @@ struct NanoSocket {
     NanoBuffer receiveNoGc(Flag!"blocking" blocking = Yes.blocking,
                            in string file = __FILE__,
                            in size_t line = __LINE__)
-        @trusted @nogc
+        @trusted @nogc const
     {
         import nogc: enforce;
         static import core.stdc.errno;
