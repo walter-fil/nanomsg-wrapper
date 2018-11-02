@@ -14,8 +14,9 @@ install:
   - popd
 
 script:
-  - dub test
-  - dub build
+  - dub test --build=unittest-cov --compiler=${DC}
+  - dub test -c asan --compiler=${DC}
+  - dub build --compiler=${DC}
   - make -C examples
 
 matrix:

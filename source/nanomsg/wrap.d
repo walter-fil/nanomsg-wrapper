@@ -223,13 +223,12 @@ struct NanoSocket {
         static import core.stdc.errno;
 
         ubyte* nanomsgBuffer = null;
-        const flags = blocking ? 0 : NN_DONTWAIT;
         const haveBuffer = () @trusted { return buffer.ptr !is null; }();
         auto recvPointer = () @trusted {
             return haveBuffer ? cast(void*)&buffer[0] : cast(void*)&nanomsgBuffer;
         }();
         const length = haveBuffer ? buffer.length : NN_MSG;
-        const numBytes = () @trusted { return nn_recv(_nanoSock, recvPointer, length, flags); }();
+        const numBytes = () @trusted { return nn_recv(_nanoSock, recvPointer, length, flags(blocking)); }();
         auto pointer = haveBuffer ? &buffer[0] : nanomsgBuffer;
 
         scope(exit) () @trusted {
@@ -244,6 +243,26 @@ struct NanoSocket {
         return numBytes >= 0
             ? () @trusted { return pointer[0 .. retSliceLength].dup; }()
             : [];
+    }
+
+    NanoBuffer receiveNoGc(Flag!"blocking" blocking = Yes.blocking,
+                           in string file = __FILE__,
+                           in size_t line = __LINE__)
+        @trusted @nogc
+    {
+        import nogc: enforce;
+        static import core.stdc.errno;
+
+        void* buffer;
+        const numBytes = nn_recv(_nanoSock, &buffer, NN_MSG, flags(blocking));
+
+        if(blocking || (numBytes < 0 && nn_errno != core.stdc.errno.EAGAIN)) {
+            enforce(numBytes >= 0,
+                    "nanomsg expression failed with value ", numBytes,
+                    " errno ", nn_errno, ", error: ", nn_strerror(nn_errno));
+        }
+
+        return NanoBuffer(buffer[0 .. numBytes]);
     }
 
 
@@ -474,7 +493,7 @@ private:
         return val;
     }
 
-    static int flags(Flag!"blocking" blocking) @safe pure {
+    static int flags(Flag!"blocking" blocking) @safe @nogc pure nothrow {
         return blocking ? 0 : NN_DONTWAIT;
     }
 }
@@ -492,3 +511,18 @@ void checkNanoSocket(T)() {
 
 enum isNanoSocket(T) = is(typeof(checkNanoSocket!T));
 static assert(isNanoSocket!NanoSocket);
+
+
+struct NanoBuffer {
+
+    // this is allocated by nanomsg
+    void[] buffer;
+
+    alias buffer this;
+
+    @disable this(this);
+
+    ~this() @trusted @nogc {
+        if(&buffer[0] !is null) nn_freemsg(&buffer[0]);
+    }
+}

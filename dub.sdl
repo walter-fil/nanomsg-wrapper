@@ -4,11 +4,16 @@ homepage "http://nanomsg.code.kaleidic.io"
 authors "Laeeth Isharc" "Atila Neves"
 license "Boost-1.0"
 targetType "library"
+
 systemDependencies "nanomsg: if you have a static build of nanomsg installed, \
     you may need to link to some other libraries such as libanl (part of \
     glibc). You may be able to find what is necessary by running \
     `pkg-config nanomsg --libs --static`"
 libs "nanomsg"
+dflags "-dip1008"
+
+dependency "nogc" version="~>0.1.0"
+
 
 configuration "library" {
 }
@@ -17,9 +22,29 @@ configuration "unittest" {
     targetType "executable"
     targetPath "bin"
     targetName "ut"
-    dependency "unit-threaded" version="*"
+
     sourcePaths "tests"
     mainSourceFile "tests/test_main.d"
+
     # nanomsg has problems with threads
     versions "unitUnthreaded"
+
+    dependency "unit-threaded" version="*"
+}
+
+configuration "asan" {
+    targetType "executable"
+    targetPath "bin"
+    targetName "asan"
+
+    sourcePaths "tests"
+    importPaths "tests"  # otherwise dub test -c asan doesn't work for some reason
+    mainSourceFile "tests/test_main.d"
+
+    dflags "-fsanitize=address" platform="ldc"
+
+    # unit threaded light is necessary for the tests to actually run
+    versions "unitUnthreaded" "unitThreadedLight"
+
+    dependency "unit-threaded" version="*"
 }
