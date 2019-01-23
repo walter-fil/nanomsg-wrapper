@@ -34,7 +34,7 @@ import unit_threaded;
 
     // messages that start with the subscription topic should be received
     pub.send("foo/hello");
-    sub.receive(No.blocking).shouldEqual("foo/hello");
+    sub.receive(No.blocking).bytes.shouldEqual("foo/hello");
 
     // but not messages that don't
     pub.send("bar/oops");
@@ -108,7 +108,7 @@ else {
         () @trusted { Thread.sleep(50.msecs); }();
 
         foreach(i; 0 .. numTimes)
-            pull.receive(No.blocking).shouldEqual("foo");
+            pull.receive(No.blocking).bytes.shouldEqual("foo");
     }
 }
 
@@ -125,7 +125,7 @@ else {
         push.send("foo");
 
     foreach(i; 0 .. numTimes)
-        pull.receive(No.blocking).shouldEqual("foo");
+        pull.receive(No.blocking).bytes.shouldEqual("foo");
 }
 
 
@@ -144,8 +144,9 @@ else {
     push1.send("foo");
     push2.send("bar");
 
-    pull.receive.shouldEqual("foo");
-    pull.receive.shouldEqual("bar");
+    pull.receive.bytes.shouldEqual("foo");
+    pull.receive.bytes.
+        shouldEqual("bar");
 }
 
 
@@ -163,8 +164,8 @@ else {
     push.send("foo");
     push.send("bar");
 
-    pull.receive.shouldEqual("foo");
-    pull.receive.shouldEqual("bar");
+    pull.receive.bytes.shouldEqual("foo");
+    pull.receive.bytes.shouldEqual("bar");
 }
 
 
@@ -190,7 +191,8 @@ else {
     NanoSocket pull;
     pull.initialize(NanoSocket.Protocol.pull, BindTo("inproc://nanomsg_receive_buffer"));
     ubyte[1024] buf;
-    pull.receive(buf, No.blocking).length.should == 0;
+    scope ret = pull.receive(buf, No.blocking);
+    ret.bytes.length.should == 0;
 }
 
 
@@ -228,7 +230,7 @@ else {
 
     push.send("Don't need the GC to receive");
     const buf = () @nogc { return pull.receiveNoGc; }();
-    const str = () @trusted { return cast(const(char)[]) buf; }();
+    const str = () @trusted { return cast(const(char)[]) buf.bytes.dup; }();
     str.shouldEqual("Don't need the GC to receive");
 }
 
@@ -247,7 +249,7 @@ else {
 
     push.send("Don't need the GC to receive");
     const buf = pull.receive;
-    const str = () @trusted { return cast(const(char)[]) buf; }();
+    const str = () @trusted { return cast(const(char)[]) buf.bytes.dup; }();
     str.shouldEqual("Don't need the GC to receive");
 }
 

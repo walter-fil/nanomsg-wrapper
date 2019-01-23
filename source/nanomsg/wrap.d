@@ -213,11 +213,11 @@ struct NanoSocket {
     /**
        A version of `receive` that takes a user supplied buffer to fill
      */
-    NanoBuffer receive(void[] buffer,
+    NanoBuffer receive(return scope void[] buffer,
                        Flag!"blocking" blocking = Yes.blocking,
                        in string file = __FILE__,
                        in size_t line = __LINE__)
-        const @safe
+        @safe scope return const
     {
         import std.algorithm: min;
         static import core.stdc.errno;
@@ -524,14 +524,14 @@ struct NanoBuffer {
     void[] bytes;
     private bool shouldDelete;
 
-    private this(void[] bytes, bool shouldDelete) @safe @nogc pure nothrow {
+    private this(void[] bytes, bool shouldDelete) @safe @nogc pure nothrow scope {
         this.bytes = bytes;
         this.shouldDelete = shouldDelete;
     }
 
     @disable this(this);
 
-    ~this() @trusted @nogc {
+    ~this() @trusted @nogc scope {
         import nanomsg.bindings: nn_freemsg;
         if(shouldDelete) nn_freemsg(&bytes[0]);
     }
