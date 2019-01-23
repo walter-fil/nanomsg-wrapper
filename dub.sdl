@@ -12,6 +12,8 @@ systemDependencies "nanomsg: if you have a static build of nanomsg installed, \
 libs "nanomsg"
 dflags "-dip25" "-dip1000" "-dip1008"
 
+dependency "concepts" version="*"
+
 // If a dependent package adds nogc as a dependency, receiveNoGc becomes
 // available
 

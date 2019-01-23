@@ -38,12 +38,12 @@ import unit_threaded;
 
     // but not messages that don't
     pub.send("bar/oops");
-    sub.receive(No.blocking).length.should == 0;
+    sub.receive(No.blocking).bytes.length.should == 0;
 
     // after unsubscribing, messages are no longer received
     sub.setOption(NanoSocket.Option.unsubscribeTopic, "foo");
     pub.send("foo/hello");
-    sub.receive(No.blocking).length.should == 0;
+    sub.receive(No.blocking).bytes.length.should == 0;
 }
 
 
@@ -61,7 +61,7 @@ else {
         requester.setOption(NanoSocket.Option.receiveTimeoutMs, timeoutMs);
 
         auto tid = () @trusted { return spawnLinked(&responder, uri, timeoutMs); }();
-        requester.send("shake?").shouldEqual("shake? yep!");
+        requester.send("shake?").bytes.shouldEqual("shake? yep!");
         () @trusted { tid.send(Stop()); }();
     }
 }
@@ -85,8 +85,8 @@ private void responder(in string uri, in int timeoutMs) {
                        },
             );
 
-        const bytes = socket.receive(No.blocking);
-        if(bytes.length) socket.send(bytes ~ cast(ubyte[])" yep!");
+        const resp = socket.receive(No.blocking);
+        if(resp.bytes.length) socket.send(resp.bytes ~ cast(ubyte[])" yep!");
     }
 }
 
@@ -191,8 +191,8 @@ else {
     NanoSocket pull;
     pull.initialize(NanoSocket.Protocol.pull, BindTo("inproc://nanomsg_receive_buffer"));
     ubyte[1024] buf;
-    scope ret = pull.receive(buf, No.blocking);
-    ret.bytes.length.should == 0;
+    scope bytes = pull.receive(buf, No.blocking);
+    bytes.length.should == 0;
 }
 
 
@@ -211,8 +211,7 @@ else {
 
     enum numBytes = 32_000;
     push.send(new ubyte[numBytes]);
-    const packet = pull.receive;
-    packet.bytes.toBytes.shouldEqual(0.repeat.take(numBytes));
+    pull.receive.bytes.toBytes.shouldEqual(0.repeat.take(numBytes));
 }
 
 

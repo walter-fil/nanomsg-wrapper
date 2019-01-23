@@ -16,6 +16,7 @@ module nanomsg.wrap;
 
 
 import nanomsg.bindings;
+import concepts: models;
 public import std.typecons: Yes, No; // to facilitate using send, receive
 
 
@@ -56,6 +57,7 @@ struct RetryDuration {
     NanoSocket - high level wrapper for a nanomsg socket
 
 */
+@models!(NanoSocket, isNanoSocket)
 struct NanoSocket {
 
     import std.traits: isArray;
@@ -201,20 +203,11 @@ struct NanoSocket {
         return getOption!T(optionC.level, optionC.option);
     }
 
-    /// receive
-    NanoBuffer receive(Flag!"blocking" blocking = Yes.blocking,
-                       in string file = __FILE__,
-                       in size_t line = __LINE__)
-        const @safe
-    {
-        return receive([], blocking, file, line);
-    }
-
     /**
-       A version of `receive` that takes a user supplied buffer to fill
+       Receive bytes on this socket.
+       Memory is allocated by nanomsg and deleted in the `NanoBuffer` destructor.
      */
-    NanoBuffer receive(return scope void[] buffer,
-                       Flag!"blocking" blocking = Yes.blocking,
+    NanoBuffer receive(Flag!"blocking" blocking = Yes.blocking,
                        in string file = __FILE__,
                        in size_t line = __LINE__)
         @safe scope return const
@@ -223,24 +216,39 @@ struct NanoSocket {
         static import core.stdc.errno;
 
         void* nanomsgBuffer = null;
-        // can't use &buffer[0] here since it might be empty
-        const haveBuffer = () @trusted { return buffer.ptr !is null; }();
-        auto recvPointer = () @trusted {
-            return haveBuffer ? &buffer[0] : cast(void*) &nanomsgBuffer;
-        }();
-        const length = haveBuffer ? buffer.length : NN_MSG;
-        const numBytes = () @trusted { return nn_recv(_nanoSock, recvPointer, length, flags(blocking)); }();
-        auto pointer = haveBuffer ? &buffer[0] : nanomsgBuffer;
+        const numBytes = () @trusted { return nn_recv(_nanoSock, &nanomsgBuffer, NN_MSG, flags(blocking)); }();
+
+        if(blocking || (numBytes < 0 && () @trusted { return nn_errno; }() != core.stdc.errno.EAGAIN))
+            enforceNanoMsgRet(numBytes, file, line);
+
+        return numBytes >= 0
+            ? NanoBuffer(() @trusted { return nanomsgBuffer[0 .. numBytes]; }(), true /*shouldDelete*/)
+            : NanoBuffer();
+    }
+
+    /**
+       A version of `receive` that takes a user supplied buffer to fill
+     */
+    void[] receive(return scope void[] buffer,
+                   Flag!"blocking" blocking = Yes.blocking,
+                   in string file = __FILE__,
+                   in size_t line = __LINE__)
+        const @safe
+    {
+        import std.algorithm: min;
+        static import core.stdc.errno;
+
+        const numBytes = () @trusted { return nn_recv(_nanoSock, &buffer[0], buffer.length, flags(blocking)); }();
         const shouldDelete = numBytes > 0 && buffer.ptr is null;
 
         if(blocking || (numBytes < 0 && () @trusted { return nn_errno; }() != core.stdc.errno.EAGAIN))
             enforceNanoMsgRet(numBytes, file, line);
 
-        const retSliceLength = haveBuffer ? min(numBytes, buffer.length) : numBytes;
+        const retSliceLength = min(numBytes, buffer.length);
 
         return numBytes >= 0
-            ? NanoBuffer(() @trusted { return pointer[0 .. retSliceLength]; }(), shouldDelete)
-            : NanoBuffer();
+            ? () @trusted { return buffer[0 .. retSliceLength]; }()
+            : [];
     }
 
     version(Have_nogc) {
@@ -272,10 +280,10 @@ struct NanoSocket {
        Sends the bytes as expected. If the protocol is Request, then returns
        the response, otherwise returns an empty array.
      */
-    void[] send(T)(T[] data,
-                    Flag!"blocking" blocking = Yes.blocking,
-                    in string file = __FILE__,
-                    in size_t line = __LINE__)
+    NanoBuffer send(T)(T[] data,
+                       Flag!"blocking" blocking = Yes.blocking,
+                       in string file = __FILE__,
+                       in size_t line = __LINE__)
         const
     {
         import std.conv: text;
@@ -286,7 +294,8 @@ struct NanoSocket {
         void[] empty;
         return () @trusted { return _protocol == Protocol.request
                 ? receive(blocking)
-                : (sent == data.length ? cast(void[]) data : empty); }();
+                : NanoBuffer(cast(void[]) data, false /*shouldDelete*/);
+        }();
     }
 
     /**
@@ -296,7 +305,7 @@ struct NanoSocket {
      This only matters when the protocol is request/response
      Returns the response if in request mode, otherwise an empty byte slice.
      */
-    void[] trySend(T)(T[] data, Duration totalDuration, Flag!"blocking" recvBlocking = Yes.blocking) {
+    auto trySend(T)(T[] data, Duration totalDuration, Flag!"blocking" recvBlocking = Yes.blocking) {
         import std.datetime: msecs;
         return trySend(data, TotalDuration(totalDuration), RetryDuration(10.msecs), recvBlocking);
     }
@@ -308,10 +317,10 @@ struct NanoSocket {
      This only matters when the protocol is request/response
      Returns the response if in request mode, otherwise an empty byte slice.
      */
-    void[] trySend(T)(T[] data,
-                       TotalDuration totalDuration,
-                       RetryDuration retryDuration,
-                       Flag!"blocking" recvBlocking = Yes.blocking)
+    NanoBuffer trySend(T)(T[] data,
+                          TotalDuration totalDuration,
+                          RetryDuration retryDuration,
+                          Flag!"blocking" recvBlocking = Yes.blocking)
     {
         import std.exception: enforce;
         static if(__VERSION__ >= 2077)
@@ -332,7 +341,7 @@ struct NanoSocket {
         enforce(sent == data.length,
                 text("Expected to send ", data.length, " bytes but sent ", sent));
 
-        return _protocol == Protocol.request ? receive(recvBlocking) : [];
+        return _protocol == Protocol.request ? receive(recvBlocking) : NanoBuffer();
     }
 
     /// connect
@@ -508,17 +517,14 @@ void checkNanoSocket(T)() {
     s.setOption(NanoSocket.Option.receiveTimeoutMs, 100);
     auto msg = s.receive(Yes.blocking);
     void[] bytes = msg.bytes;
-    s.send(msg);
+    s.send(bytes);
 }
 
 enum isNanoSocket(T) = is(typeof(checkNanoSocket!T));
-static assert(isNanoSocket!NanoSocket);
 
 
 /// RAII struct for nn_freemsg
 struct NanoBuffer {
-
-    alias bytes this;
 
     /// Could be allocated by nanomsg
     void[] bytes;
