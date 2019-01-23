@@ -10,7 +10,9 @@ systemDependencies "nanomsg: if you have a static build of nanomsg installed, \
     glibc). You may be able to find what is necessary by running \
     `pkg-config nanomsg --libs --static`"
 libs "nanomsg"
-dflags "-dip1008"
+dflags "-dip25" "-dip1000" "-dip1008"
+
+dependency "concepts" version="*"
 
 // If a dependent package adds nogc as a dependency, receiveNoGc becomes
 // available
@@ -45,7 +47,8 @@ configuration "asan" {
     dflags "-fsanitize=address" platform="ldc"
 
     # unit threaded light is necessary for the tests to actually run
-    versions "unitUnthreaded" "unitThreadedLight"
+    # asan doesn't like D threads
+    versions "unitUnthreaded" "unitThreadedLight" "nanomsg_wrapper_asan"
 
     dependency "unit-threaded" version="*"
     dependency "nogc" version="~>0.1.1"
