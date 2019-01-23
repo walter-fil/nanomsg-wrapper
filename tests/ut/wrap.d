@@ -214,25 +214,6 @@ else {
 }
 
 
-@("receive.nogc.explicit")
-@safe unittest {
-    enum uri = "inproc://nanomsg_receive_nogc";
-
-    NanoSocket pull;
-    pull.initialize(NanoSocket.Protocol.pull, BindTo(uri));
-    pull.setOption(NanoSocket.Option.receiveTimeoutMs, 10);
-
-    NanoSocket push;
-    push.initialize(NanoSocket.Protocol.push, ConnectTo(uri));
-    push.setOption(NanoSocket.Option.sendTimeoutMs, 10);
-
-    push.send("Don't need the GC to receive");
-    const buf = () @nogc { return pull.receiveNoGc; }();
-    const str = () @trusted { return cast(const(char)[]) buf.bytes.dup; }();
-    str.shouldEqual("Don't need the GC to receive");
-}
-
-
 @("receive.nogc.implicit")
 @safe unittest {
     enum uri = "inproc://nanomsg_receive_nogc";

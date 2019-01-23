@@ -229,30 +229,6 @@ struct NanoSocket {
         return receiveImpl(buffer, blocking, file, line).bytes;
     }
 
-    version(Have_nogc) {
-        NanoBuffer receiveNoGc(Flag!"blocking" blocking = Yes.blocking,
-                               in string file = __FILE__,
-                               in size_t line = __LINE__)
-            @trusted @nogc const
-        {
-            import nogc: NoGcException;
-            static import core.stdc.errno;
-
-            void* buffer;
-            const numBytes = nn_recv(_nanoSock, &buffer, NN_MSG, flags(blocking));
-
-            if(blocking || (numBytes < 0 && nn_errno != core.stdc.errno.EAGAIN)) {
-                if(numBytes < 0)
-                    NoGcException.throwNewWithFileAndLine(
-                        file, line, "nanomsg expression failed with value ", numBytes,
-                        " errno ", nn_errno, ", error: ", nn_strerror(nn_errno));
-            }
-
-            const shouldDelete = numBytes > 0;
-            return NanoBuffer(buffer[0 .. numBytes], shouldDelete);
-        }
-    }
-
 
     /**
        Sends the bytes as expected. If the protocol is Request, then returns
@@ -413,11 +389,19 @@ private:
     void enforceNanoMsgRet(E)(lazy E expr, string file = __FILE__, size_t line = __LINE__) @trusted const {
         import std.conv: text;
         const value = expr();
-        if(value < 0)
-            throw new Exception(text("nanomsg expression failed with value ", value,
-                                     " errno ", nn_errno, ", error: ", nn_strerror(nn_errno)),
-                                file,
-                                line);
+        if(value < 0) {
+            version(NanomsgWrapperNoGcException) {
+                import nogc: NoGcException;
+                NoGcException.throwNewWithFileAndLine(
+                    file, line, "nanomsg expression failed with value ", numBytes,
+                    " errno ", nn_errno, ", error: ", nn_strerror(nn_errno));
+            } else {
+                throw new Exception(text("nanomsg expression failed with value ", value,
+                                         " errno ", nn_errno, ", error: ", nn_strerror(nn_errno)),
+                                    file,
+                                    line);
+            }
+        }
     }
 
     // the int level and option values needed by the nanomsg C API
