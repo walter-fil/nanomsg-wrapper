@@ -1,32 +1,22 @@
 language: d
 sudo: required
+dist: xenial
 
-apt_packages:
-  - cmake
-
-install:
-  - git clone https://github.com/nanomsg/nanomsg.git
-  - pushd nanomsg
-  - cmake .
-  - make -j`nproc`
-  - sudo make install
-  - sudo ldconfig
-  - popd
-
-script:
-  - dub test --build=unittest-cov --compiler=${DC}
-  - dub test -c asan --compiler=${DC}
-  - dub build --compiler=${DC}
-  - make -C examples
 
 matrix:
   include:
     - d: dmd-nightly
-    - d: dmd-2.082.1
-    - d: dmd-2.081.2
-    - d: dmd-2.080.1
-    - d: ldc-1.12.0
-    - d: ldc-1.11.0
-    - d: ldc-1.10.0
+    - d: dmd-2.084.0
+    - d: ldc-1.13.0
   allow_failures:
     - d: dmd-nightly
+
+
+addons:
+  apt:
+    packages:
+      - libnanomsg-dev
+
+
+after_success:
+ - bash <(curl -s https://codecov.io/bash)
