@@ -145,8 +145,7 @@ else {
     push2.send("bar");
 
     pull.receive.bytes.shouldEqual("foo");
-    pull.receive.bytes.
-        shouldEqual("bar");
+    pull.receive.bytes.shouldEqual("bar");
 }
 
 

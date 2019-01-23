@@ -212,18 +212,8 @@ struct NanoSocket {
                        in size_t line = __LINE__)
         @safe scope return const
     {
-        import std.algorithm: min;
-        static import core.stdc.errno;
-
-        void* nanomsgBuffer = null;
-        const numBytes = () @trusted { return nn_recv(_nanoSock, &nanomsgBuffer, NN_MSG, flags(blocking)); }();
-
-        if(blocking || (numBytes < 0 && () @trusted { return nn_errno; }() != core.stdc.errno.EAGAIN))
-            enforceNanoMsgRet(numBytes, file, line);
-
-        return numBytes >= 0
-            ? NanoBuffer(() @trusted { return nanomsgBuffer[0 .. numBytes]; }(), true /*shouldDelete*/)
-            : NanoBuffer();
+        static void[] buffer;
+        return receiveImpl(buffer, blocking, file, line);
     }
 
     /**
@@ -235,20 +225,8 @@ struct NanoSocket {
                    in size_t line = __LINE__)
         const @safe
     {
-        import std.algorithm: min;
-        static import core.stdc.errno;
-
-        const numBytes = () @trusted { return nn_recv(_nanoSock, &buffer[0], buffer.length, flags(blocking)); }();
-        const shouldDelete = numBytes > 0 && buffer.ptr is null;
-
-        if(blocking || (numBytes < 0 && () @trusted { return nn_errno; }() != core.stdc.errno.EAGAIN))
-            enforceNanoMsgRet(numBytes, file, line);
-
-        const retSliceLength = min(numBytes, buffer.length);
-
-        return numBytes >= 0
-            ? () @trusted { return buffer[0 .. retSliceLength]; }()
-            : [];
+        auto ptr = &buffer[0];
+        return receiveImpl(buffer, blocking, file, line).bytes;
     }
 
     version(Have_nogc) {
@@ -393,6 +371,44 @@ private:
     Protocol _protocol;
     string _uri;
     Connection _connection;
+
+    NanoBuffer receiveImpl(return scope void[] buffer,
+                           Flag!"blocking" blocking = Yes.blocking,
+                           in string file = __FILE__,
+                           in size_t line = __LINE__)
+        @safe return scope const
+    {
+        import std.algorithm: min;
+        static import core.stdc.errno;
+
+        void* nanomsgBuffer = null;
+        // can't use &buffer[0] here since it might be empty
+        const haveBuffer = () @trusted { return buffer.ptr !is null; }();
+        const shouldDelete = !haveBuffer;
+
+        auto recvPointer = () @trusted {
+            return haveBuffer ? &buffer[0] : cast(void*) &nanomsgBuffer;
+        }();
+
+
+        const length = haveBuffer ? buffer.length : NN_MSG;
+        const numBytes = () @trusted { return nn_recv(_nanoSock, recvPointer, length, flags(blocking)); }();
+
+        bool isErrnoEagain() @trusted {
+            return nn_errno == core.stdc.errno.EAGAIN;
+        }
+
+        if(blocking || (numBytes < 0 && !isErrnoEagain)) {
+            enforceNanoMsgRet(numBytes, file, line);
+        }
+
+        auto pointer = haveBuffer ? &buffer[0] : nanomsgBuffer;
+        const retSliceLength = haveBuffer ? min(numBytes, buffer.length) : numBytes;
+
+        return numBytes >= 0
+            ? NanoBuffer(() @trusted { return pointer[0 .. retSliceLength]; }(), shouldDelete)
+            : NanoBuffer();
+    }
 
     void enforceNanoMsgRet(E)(lazy E expr, string file = __FILE__, size_t line = __LINE__) @trusted const {
         import std.conv: text;
@@ -539,6 +555,6 @@ struct NanoBuffer {
 
     ~this() @trusted @nogc scope {
         import nanomsg.bindings: nn_freemsg;
-        if(shouldDelete) nn_freemsg(&bytes[0]);
+        if(shouldDelete && bytes.length > 0) nn_freemsg(&bytes[0]);
     }
 }
