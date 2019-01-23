@@ -184,7 +184,17 @@ else {
     push.send("foo").shouldThrow;
 }
 
-@("receive.big buffer")
+
+@("receive.buffer.nothing")
+@safe unittest {
+    NanoSocket pull;
+    pull.initialize(NanoSocket.Protocol.pull, BindTo("inproc://nanomsg_receive_buffer"));
+    ubyte[1024] buf;
+    pull.receive(buf, No.blocking).length.should == 0;
+}
+
+
+@("receive.buffer.something")
 @safe unittest {
 
     import std.range: repeat, take;
@@ -199,22 +209,12 @@ else {
 
     enum numBytes = 32_000;
     push.send(new ubyte[numBytes]);
-    const bytes = () @trusted { return cast(const(ubyte)[]) pull.receive; }();
-    bytes.shouldEqual(0.repeat.take(numBytes));
-
+    const packet = pull.receive;
+    packet.bytes.toBytes.shouldEqual(0.repeat.take(numBytes));
 }
 
 
-@("receive.with user-supplied buffer")
-@safe unittest {
-    NanoSocket pull;
-    pull.initialize(NanoSocket.Protocol.pull, BindTo("inproc://nanomsg_receive_buffer"));
-    ubyte[1024] buf;
-    pull.receive(buf, No.blocking).length.should == 0;
-}
-
-
-@("receive.nogc")
+@("receive.nogc.explicit")
 @safe unittest {
     enum uri = "inproc://nanomsg_receive_nogc";
 
@@ -230,4 +230,28 @@ else {
     const buf = () @nogc { return pull.receiveNoGc; }();
     const str = () @trusted { return cast(const(char)[]) buf; }();
     str.shouldEqual("Don't need the GC to receive");
+}
+
+
+@("receive.nogc.implicit")
+@safe unittest {
+    enum uri = "inproc://nanomsg_receive_nogc";
+
+    NanoSocket pull;
+    pull.initialize(NanoSocket.Protocol.pull, BindTo(uri));
+    pull.setOption(NanoSocket.Option.receiveTimeoutMs, 10);
+
+    NanoSocket push;
+    push.initialize(NanoSocket.Protocol.push, ConnectTo(uri));
+    push.setOption(NanoSocket.Option.sendTimeoutMs, 10);
+
+    push.send("Don't need the GC to receive");
+    const buf = pull.receive;
+    const str = () @trusted { return cast(const(char)[]) buf; }();
+    str.shouldEqual("Don't need the GC to receive");
+}
+
+
+ubyte[] toBytes(T)(T bytes) @trusted {
+    return cast(ubyte[]) bytes.dup;
 }

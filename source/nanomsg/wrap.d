@@ -202,9 +202,9 @@ struct NanoSocket {
     }
 
     /// receive
-    void[] receive(Flag!"blocking" blocking = Yes.blocking,
-                    in string file = __FILE__,
-                    in size_t line = __LINE__)
+    NanoBuffer receive(Flag!"blocking" blocking = Yes.blocking,
+                       in string file = __FILE__,
+                       in size_t line = __LINE__)
         const @safe
     {
         return receive([], blocking, file, line);
@@ -213,10 +213,10 @@ struct NanoSocket {
     /**
        A version of `receive` that takes a user supplied buffer to fill
      */
-    void[] receive(void[] buffer,
-                    Flag!"blocking" blocking = Yes.blocking,
-                    in string file = __FILE__,
-                    in size_t line = __LINE__)
+    NanoBuffer receive(void[] buffer,
+                       Flag!"blocking" blocking = Yes.blocking,
+                       in string file = __FILE__,
+                       in size_t line = __LINE__)
         const @safe
     {
         import std.algorithm: min;
@@ -231,10 +231,7 @@ struct NanoSocket {
         const length = haveBuffer ? buffer.length : NN_MSG;
         const numBytes = () @trusted { return nn_recv(_nanoSock, recvPointer, length, flags(blocking)); }();
         auto pointer = haveBuffer ? &buffer[0] : nanomsgBuffer;
-
-        scope(exit) () @trusted {
-            if(numBytes > 0 && buffer.ptr is null) nn_freemsg(nanomsgBuffer);
-        }();
+        const shouldDelete = numBytes > 0 && buffer.ptr is null;
 
         if(blocking || (numBytes < 0 && () @trusted { return nn_errno; }() != core.stdc.errno.EAGAIN))
             enforceNanoMsgRet(numBytes, file, line);
@@ -242,8 +239,8 @@ struct NanoSocket {
         const retSliceLength = haveBuffer ? min(numBytes, buffer.length) : numBytes;
 
         return numBytes >= 0
-            ? () @trusted { return pointer[0 .. retSliceLength].dup; }()
-            : [];
+            ? NanoBuffer(() @trusted { return pointer[0 .. retSliceLength]; }(), shouldDelete)
+            : NanoBuffer();
     }
 
     version(Have_nogc) {
@@ -265,7 +262,8 @@ struct NanoSocket {
                         " errno ", nn_errno, ", error: ", nn_strerror(nn_errno));
             }
 
-            return NanoBuffer(buffer[0 .. numBytes]);
+            const shouldDelete = numBytes > 0;
+            return NanoBuffer(buffer[0 .. numBytes], shouldDelete);
         }
     }
 
@@ -509,7 +507,7 @@ void checkNanoSocket(T)() {
     s.setOption(NanoSocket.Option.subscribeTopic, "topic");
     s.setOption(NanoSocket.Option.receiveTimeoutMs, 100);
     auto msg = s.receive(Yes.blocking);
-    void[] bytes = msg;
+    void[] bytes = msg.bytes;
     s.send(msg);
 }
 
@@ -520,15 +518,21 @@ static assert(isNanoSocket!NanoSocket);
 /// RAII struct for nn_freemsg
 struct NanoBuffer {
 
-    /// Could be allocated by nanomsg
-    void[] buffer;
+    alias bytes this;
 
-    alias buffer this;
+    /// Could be allocated by nanomsg
+    void[] bytes;
+    private bool shouldDelete;
+
+    private this(void[] bytes, bool shouldDelete) @safe @nogc pure nothrow {
+        this.bytes = bytes;
+        this.shouldDelete = shouldDelete;
+    }
 
     @disable this(this);
 
     ~this() @trusted @nogc {
         import nanomsg.bindings: nn_freemsg;
-        if(&buffer[0] !is null) nn_freemsg(&buffer[0]);
+        if(shouldDelete) nn_freemsg(&bytes[0]);
     }
 }
