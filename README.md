@@ -22,6 +22,8 @@ pushSock.send([0, 1, 3, 4, 5]);
 Low Level Examples [Docs](docs/examples/nanomsg.examples.html) [Code](examples)
 
 
-status
--------
-Please be aware that this is of beta quality although it is currently used in production
+@nogc
+-----
+
+There is an extra `NanoSocket` member function called `receiveNoGc` if the nogc dub package
+is added as a dependency.

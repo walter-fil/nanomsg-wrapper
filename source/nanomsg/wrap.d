@@ -246,25 +246,27 @@ struct NanoSocket {
             : [];
     }
 
-    NanoBuffer receiveNoGc(Flag!"blocking" blocking = Yes.blocking,
-                           in string file = __FILE__,
-                           in size_t line = __LINE__)
-        @trusted @nogc const
-    {
-        import nogc: NoGcException;
-        static import core.stdc.errno;
+    version(Have_nogc) {
+        NanoBuffer receiveNoGc(Flag!"blocking" blocking = Yes.blocking,
+                               in string file = __FILE__,
+                               in size_t line = __LINE__)
+            @trusted @nogc const
+        {
+            import nogc: NoGcException;
+            static import core.stdc.errno;
 
-        void* buffer;
-        const numBytes = nn_recv(_nanoSock, &buffer, NN_MSG, flags(blocking));
+            void* buffer;
+            const numBytes = nn_recv(_nanoSock, &buffer, NN_MSG, flags(blocking));
 
-        if(blocking || (numBytes < 0 && nn_errno != core.stdc.errno.EAGAIN)) {
-            if(numBytes < 0)
-                NoGcException.throwNewWithFileAndLine(
-                    file, line, "nanomsg expression failed with value ", numBytes,
-                    " errno ", nn_errno, ", error: ", nn_strerror(nn_errno));
+            if(blocking || (numBytes < 0 && nn_errno != core.stdc.errno.EAGAIN)) {
+                if(numBytes < 0)
+                    NoGcException.throwNewWithFileAndLine(
+                        file, line, "nanomsg expression failed with value ", numBytes,
+                        " errno ", nn_errno, ", error: ", nn_strerror(nn_errno));
+            }
+
+            return NanoBuffer(buffer[0 .. numBytes]);
         }
-
-        return NanoBuffer(buffer[0 .. numBytes]);
     }
 
 
@@ -515,6 +517,7 @@ enum isNanoSocket(T) = is(typeof(checkNanoSocket!T));
 static assert(isNanoSocket!NanoSocket);
 
 
+/// RAII struct for nn_freemsg
 struct NanoBuffer {
 
     // this is allocated by nanomsg
