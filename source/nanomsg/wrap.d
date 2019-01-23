@@ -520,7 +520,7 @@ static assert(isNanoSocket!NanoSocket);
 /// RAII struct for nn_freemsg
 struct NanoBuffer {
 
-    // this is allocated by nanomsg
+    /// Could be allocated by nanomsg
     void[] buffer;
 
     alias buffer this;
@@ -528,6 +528,7 @@ struct NanoBuffer {
     @disable this(this);
 
     ~this() @trusted @nogc {
+        import nanomsg.bindings: nn_freemsg;
         if(&buffer[0] !is null) nn_freemsg(&buffer[0]);
     }
 }

@@ -5,7 +5,7 @@ import nanomsg.wrap;
 import unit_threaded;
 
 
-@("trySend")
+@("send.try")
 @safe unittest {
     import std.datetime: seconds, msecs;
 
@@ -16,9 +16,7 @@ import unit_threaded;
 }
 
 
-/// set/get option
-///
-@("set/get option")
+@("option")
 @safe unittest {
     auto sock = NanoSocket(NanoSocket.Protocol.subscribe);
     sock.getOption!int(NanoSocket.Option.sendTimeoutMs).shouldEqual(-1);
@@ -26,9 +24,8 @@ import unit_threaded;
     sock.getOption!int(NanoSocket.Option.sendTimeoutMs).shouldEqual(42);
 }
 
-/// publish/subscribe
-///
-@("pub/sub")
+
+@("pubsub")
 @safe unittest {
     const uri = "inproc://test_pubsub";
     auto pub = NanoSocket(NanoSocket.Protocol.publish, const BindTo(uri));
@@ -50,28 +47,26 @@ import unit_threaded;
 }
 
 
-/// request/response
-///
-@("req/rep")
-@safe unittest {
-    import std.concurrency: spawnLinked, send;
+// ASAN doesn't like D threads
+version(nanomsg_wrapper_asan) {}
+else {
+    @("reqrep")
+        @safe unittest {
+        import std.concurrency: spawnLinked, send;
 
-    const uri = "inproc://test_reqrep";
-    const requester = NanoSocket(NanoSocket.Protocol.request, ConnectTo(uri));
+        const uri = "inproc://test_reqrep";
+        const requester = NanoSocket(NanoSocket.Protocol.request, ConnectTo(uri));
 
-    enum timeoutMs = 50;
-    requester.setOption(NanoSocket.Option.receiveTimeoutMs, timeoutMs);
+        enum timeoutMs = 50;
+        requester.setOption(NanoSocket.Option.receiveTimeoutMs, timeoutMs);
 
-    auto tid = () @trusted { return spawnLinked(&responder, uri, timeoutMs); }();
-    requester.send("shake?").shouldEqual("shake? yep!");
-    () @trusted { tid.send(Stop()); }();
+        auto tid = () @trusted { return spawnLinked(&responder, uri, timeoutMs); }();
+        requester.send("shake?").shouldEqual("shake? yep!");
+        () @trusted { tid.send(Stop()); }();
+    }
 }
 
 
-/**
-    Example:
-        utility function
-*/
 private struct Respond { string value; }
 private struct Stop {}
 
@@ -96,13 +91,9 @@ private void responder(in string uri, in int timeoutMs) {
 }
 
 
-/**
-    Example:
-        push/pull over TCP
-*/
 version(Windows) {} //FIXME
 else {
-    @("push/pull over TCP")
+    @("push.TCP")
     @safe unittest {
         import core.thread: Thread, msecs;
 
@@ -122,12 +113,8 @@ else {
 }
 
 
-/**
-    Example:
-        push/pull over IPC
-*/
 @HiddenTest /// it's here to show that this can fail, but it doesn't always
-@("push/pull over IPC")
+@("push.IPC")
 @safe unittest {
     auto pull = NanoSocket(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_push_pull_test"));
     auto push = NanoSocket(NanoSocket.Protocol.push, ConnectTo("ipc://nanomsg_ipc_push_pull_test"));
@@ -142,7 +129,7 @@ else {
 }
 
 
-@("bind to several addresses at once")
+@("bind.several addresses at once")
 @safe unittest {
     auto pull = NanoSocket(NanoSocket.Protocol.pull, BindTo(["ipc://nanomsg_ipc_push_pull_1",
                                                              "ipc://nanomsg_ipc_push_pull_2"]));
@@ -162,7 +149,7 @@ else {
 }
 
 
-@("init NanoSocket after construction")
+@("init.after.construction")
 @safe unittest {
     NanoSocket pull;
     NanoSocket push;
@@ -180,14 +167,16 @@ else {
     pull.receive.shouldEqual("bar");
 }
 
-@("Can init twice")
+
+@("init.twice")
 @safe unittest {
     NanoSocket pull;
     pull.initialize(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_init_twice"));
     pull.initialize(NanoSocket.Protocol.pull, BindTo("ipc://nanomsg_ipc_init_twice"));
 }
 
-@("Non-initialised NanoSocket throws on send")
+
+@("init.send throws if not initialised")
 @safe unittest {
     enum uri = "ipc://nanomsg_init_send_throws";
     auto pull = NanoSocket(NanoSocket.Protocol.pull, BindTo(uri));
@@ -224,7 +213,8 @@ else {
     pull.receive(buf, No.blocking).length.should == 0;
 }
 
-@("receive.@nogc")
+
+@("receive.nogc")
 @safe unittest {
     enum uri = "inproc://nanomsg_receive_nogc";
 

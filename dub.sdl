@@ -45,7 +45,8 @@ configuration "asan" {
     dflags "-fsanitize=address" platform="ldc"
 
     # unit threaded light is necessary for the tests to actually run
-    versions "unitUnthreaded" "unitThreadedLight"
+    # asan doesn't like D threads
+    versions "unitUnthreaded" "unitThreadedLight" "nanomsg_wrapper_asan"
 
     dependency "unit-threaded" version="*"
     dependency "nogc" version="~>0.1.1"
