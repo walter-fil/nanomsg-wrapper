@@ -10,13 +10,17 @@ systemDependencies "nanomsg: if you have a static build of nanomsg installed, \
     glibc). You may be able to find what is necessary by running \
     `pkg-config nanomsg --libs --static`"
 libs "nanomsg"
-dflags "-dip25" "-dip1000" "-dip1008"
 
 dependency "concepts" version="*"
 
 
 configuration "library" {
 }
+
+configuration "libraryDips" {
+    dflags "-dip25" "-dip1000" "-dip1008"
+}
+
 
 configuration "unittest" {
     targetType "executable"
@@ -26,6 +30,7 @@ configuration "unittest" {
     sourcePaths "tests"
     mainSourceFile "tests/test_main.d"
 
+    dflags "-dip25" "-dip1000" "-dip1008"
     # nanomsg has problems with threads
     versions "unitUnthreaded"
 
@@ -41,6 +46,7 @@ configuration "asan" {
     importPaths "tests"  # otherwise dub test -c asan doesn't work for some reason
     mainSourceFile "tests/test_main.d"
 
+    dflags "-dip25" "-dip1000" "-dip1008"
     dflags "-fsanitize=address" platform="ldc"
 
     # unit threaded light is necessary for the tests to actually run
