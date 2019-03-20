@@ -14,8 +14,6 @@ dflags "-dip25" "-dip1000" "-dip1008"
 
 dependency "concepts" version="*"
 
-// If a dependent package adds nogc as a dependency, receiveNoGc becomes
-// available
 
 configuration "library" {
 }
@@ -32,7 +30,6 @@ configuration "unittest" {
     versions "unitUnthreaded"
 
     dependency "unit-threaded" version="*"
-    dependency "nogc" version="~>0.1.1"
 }
 
 configuration "asan" {
@@ -51,5 +48,4 @@ configuration "asan" {
     versions "unitUnthreaded" "unitThreadedLight" "nanomsg_wrapper_asan"
 
     dependency "unit-threaded" version="*"
-    dependency "nogc" version="~>0.1.1"
 }
