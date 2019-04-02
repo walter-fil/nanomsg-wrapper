@@ -881,6 +881,9 @@ enum NN_STAT
 }
 
 ///
+extern (C) ulong nn_get_statistic(int s, int stat);
+
+///
 enum NN_PIPE_RELEASE=1;
 ///
 enum NN_PIPE_PARSED=2;
