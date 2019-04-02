@@ -323,6 +323,11 @@ struct NanoSocket {
     string uri() @safe @nogc pure const nothrow {
         return _uri;
     }
+    
+    /// Get socket statistic
+	ulong stats(int stat) {
+		return nn_get_statistic(_nanoSock, stat);
+	}
 
     /// toString
     string toString() @safe pure const {
